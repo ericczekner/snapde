@@ -32,26 +32,26 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-          <header className="fixed top-0 left-0 w-full shadow-md z-50 p-4 bg-darkGray">
+          {/* <header className="fixed top-0 left-0 w-full shadow-md z-50 p-4 bg-darkGray">
             <div className="container mx-auto flex justify-between items-center">
               <div>
                 <Link href="/" className="text-4xl  font-bold text-secondary">
                   SnapDE
                 </Link>
-                {/* <p className="text-lg text-secondary">
+               <p className="text-lg text-secondary">
                   Your Data. Your Rules.
-                </p> */}
+                </p>
               </div>
               <div className="flex justify-between items-center py-5 gap-x-5">
                 <Link href="/upload" className="text-xl font-bold text-lightGray">
                   Upload CSV
                 </Link>
-                {/* <Link href="/history" className="text-xl font-bold text-lightGray">
+                <Link href="/history" className="text-xl font-bold text-lightGray">
                   View DE History
-                </Link> */}
+                </Link>
               </div>
             </div>
-          </header>
+          </header> */}
           <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-background">
             <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
               {children}

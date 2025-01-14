@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const restURL =
-	"https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/";
-
 async function getToken() {
 	const authURL =
 		"https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.auth.marketingcloudapis.com/v2/token";
@@ -72,7 +69,7 @@ export async function POST(req: NextRequest) {
 	const primaryKeyFields = payload.fields.filter(
 		(field: any) => field.isPrimaryKey
 	);
-	let uploadBody: string[] = [];
+	const uploadBody: string[] = [];
 	if (primaryKeyFields.length > 0) {
 		primaryKeyFields.forEach((field: any) => {
 			field.isNullable = false;
@@ -143,6 +140,7 @@ export async function POST(req: NextRequest) {
 
 		return NextResponse.json({ ok: true, status: 200 });
 	} catch (err: any) {
+		console.log(err);
 		return NextResponse.json({
 			error:
 				"An error occurred when creating the data extension",

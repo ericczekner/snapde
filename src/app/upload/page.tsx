@@ -30,13 +30,13 @@ type field = {
     defaultValue: string
 }
 
-type fields = field[]
+
 
 export default function Upload()
 {
     const [file, setFile] = useState({ name: "", url: "", type: "" });
     const [fileEntered, setFileEntered] = useState(false);
-    const [csvData, setCsvData] = useState(null);
+
     const [tableData, setTableData] = useState([]);
     const [tableLoading, setTableLoading] = useState(false);
     const [deConfig, setDeConfig] = useState<{
@@ -156,7 +156,7 @@ export default function Upload()
     {
         setFile({ name: "", url: "", type: "" });
         setTableData([]);
-        setCsvData(null);
+
         setDeConfig({
             name: "",
             fields: [],
@@ -348,7 +348,7 @@ export default function Upload()
                                                 const file = item.getAsFile();
                                                 if (file && isCsv(file))
                                                 {
-                                                    let blobUrl = URL.createObjectURL(file);
+                                                    const blobUrl = URL.createObjectURL(file);
                                                     setFile({
                                                         name: file.name,
                                                         url: blobUrl,
@@ -380,7 +380,7 @@ export default function Upload()
                                     accept=".csv"
                                     onChange={(e) =>
                                     {
-                                        let files = e.target.files;
+                                        const files = e.target.files;
                                         if (files && files[0])
                                         {
                                             let blobUrl = URL.createObjectURL(files[0]);

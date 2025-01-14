@@ -177,7 +177,7 @@ export default function Upload()
         }
 
         console.log(tableData)
-        const res = await fetch('http://localhost:3000/api/create-de', {
+        const res = await fetch('http://https://snapde.vercel.app/api/create-de', {
             method: "POST",
             headers: {
                 'Content-Type': 'application/json'

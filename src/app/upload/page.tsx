@@ -383,7 +383,7 @@ export default function Upload()
                                         const files = e.target.files;
                                         if (files && files[0])
                                         {
-                                            let blobUrl = URL.createObjectURL(files[0]);
+                                            const blobUrl = URL.createObjectURL(files[0]);
                                             setFile({
                                                 name: files[0].name,
                                                 url: blobUrl,

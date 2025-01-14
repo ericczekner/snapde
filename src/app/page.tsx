@@ -1,7 +1,7 @@
 //The main home page
 
 "use client"
-import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Image, Button } from "@nextui-org/react"
+import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Button } from "@nextui-org/react"
 import { ArrowUpTrayIcon, ClockIcon } from "@heroicons/react/24/outline";
 export default function Home()
 {

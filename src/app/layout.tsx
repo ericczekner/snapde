@@ -3,7 +3,6 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Providers from "@/providers/Providers";
 
-
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -19,6 +18,8 @@ export const metadata: Metadata = {
   description: "Your Data. Your Rules.",
 };
 
+import "@salesforce-ux/design-system/assets/styles/salesforce-lightning-design-system.min.css";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -28,10 +29,11 @@ export default function RootLayout({
   return (
 
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+
+      <body className="antialiased font-sans">
+
         <Providers>
+
           {/* <header className="fixed top-0 left-0 w-full shadow-md z-50 p-4 bg-darkGray">
             <div className="container mx-auto flex justify-between items-center">
               <div>
@@ -52,8 +54,8 @@ export default function RootLayout({
               </div>
             </div>
           </header> */}
-          <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)] bg-background">
-            <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
+          <div className="grid items-center justify-items-center  p-8 pb-20 gap-16 sm:p-20 font-sans">
+            <main className="flex flex-col gap-8 sm:items-start">
               {children}
             </main>
           </div>

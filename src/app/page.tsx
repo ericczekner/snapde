@@ -1,19 +1,21 @@
 "use client";
 import
 {
-  Button,
   Table,
   TableHeader,
   TableBody,
   TableColumn,
   TableRow,
   TableCell,
-  Input,
+
   Select,
-  Alert,
+
   SelectItem,
-  Checkbox
+
 } from "@nextui-org/react";
+import { Button, Spinner, Files, File, Input, Checkbox, Card, Alert, AlertContainer, Icon, IconSettings } from "@salesforce/design-system-react";
+
+
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -32,53 +34,67 @@ type field = {
 
 
 
+
+
 export default function Upload()
 {
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null)
-  const [userInfo, setUserInfo] = useState<any>(null)
+  const [userInfo, setUserInfo] = useState<any>({
+    "id": "NzE3MzM0MDgzOjQ6MQ",
+    "key": "7339a846-6129-40c7-90fb-753c918f7fa3",
+    "lastUpdated": "2025-01-08T13:45:48.963Z",
+    "createdDate": "2021-07-26T17:16:49.973Z",
+    "username": "eric.czekner_crossmarket",
+    "name": "Eric Czekner",
+    "locale": "en-US",
+    "utcOffset": "-05:00",
+    "email": "eric.czekner@slalom.com",
+    "isEtAdmin": false,
+    "businessUnitId": 7224602,
+    "businessUnitAccountTypeId": 8
+  })
 
 
-  useEffect(() =>
-  {
-    const init = async () =>
-    {
-      try
-      {
-        // Extract stack information
-        const stackInfo = await getStackInfo();
-        if (!stackInfo)
-        {
-          setError("You do not appear to be logged into Salesforce Marketing Cloud.");
-          return;
-        }
+  //TODO: Implement authentication logic to properly set up the localized api routes we need.
+  // useEffect(() =>
+  // {
+  //   const init = async () =>
+  //   {
+  //     try
+  //     {
+  //       // Extract stack information
+  //       const stackInfo = await getStackInfo();
+  //       if (!stackInfo)
+  //       {
+  //         setError("You do not appear to be logged into Salesforce Marketing Cloud.");
+  //         return;
+  //       }
 
-        console.log("Stack Info:", stackInfo);
+  //       console.log("Stack Info:", stackInfo);
 
-        // Validate the user session
-        const user = await validateUser(stackInfo.urlEtmc);
-        if (!user)
-        {
-          setError("You are not logged in to Salesforce Marketing Cloud.");
-          return;
-        }
+  //       // Validate the user session
+  //       const user = await validateUser(stackInfo.urlEtmc);
+  //       if (!user)
+  //       {
+  //         setError("You are not logged in to Salesforce Marketing Cloud.");
+  //         return;
+  //       }
 
-        // Set the user information
-        setUserInfo(user);
-      } catch (err)
-      {
-        console.error("Unexpected error during initialization:", err);
-        setError("An unexpected error occurred. Please try again.");
-      } finally
-      {
-        setLoading(false);
-      }
-    };
+  //       // Set the user information
+  //       setUserInfo(user);
+  //     } catch (err)
+  //     {
+  //       console.error("Unexpected error during initialization:", err);
+  //       setError("An unexpected error occurred. Please try again.");
+  //     } finally
+  //     {
+  //       setLoading(false);
+  //     }
+  //   };
 
-    init();
-  }, []);
-
-
+  //   init();
+  // }, []);
 
   const [file, setFile] = useState({ name: "", url: "", type: "" });
   const [fileEntered, setFileEntered] = useState(false);
@@ -110,7 +126,6 @@ export default function Upload()
     description: "",
     type: "success",
   });
-
 
   const [saving, setSaving] = useState(false);
 
@@ -167,8 +182,8 @@ export default function Upload()
                 guessedType === "EmailAddress" ? "254" :
                   guessedType === "Locale" ? "5" :
                     "",
-              precision: precision, // Set calculated precision for Decimal
-              scale: scale,         // Set calculated scale for Decimal
+              precision: precision,
+              scale: scale,
               isPrimaryKey: false,
               isNullable: true,
               defaultValue: "",
@@ -215,6 +230,12 @@ export default function Upload()
   const createDataExtension = async () =>
   {
     setSaving(true)
+    setShowAlert({
+      shown: false,
+      title: "",
+      description: "",
+      type: "success",
+    })
 
     if (deConfig.isSendable && deConfig.subscriberKey === undefined)
     {
@@ -223,7 +244,7 @@ export default function Upload()
     }
 
     console.log(tableData)
-    const res = await fetch('https://snapde.vercel.app/api/create-de', {
+    const res = await fetch('http://localhost:3000/api/create-de', {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'
@@ -261,7 +282,37 @@ export default function Upload()
     {
       const updatedFields = [...prev.fields];
       updatedFields[index] = { ...updatedFields[index], ...updatedField };
+
+      // Ensure nullable is false when isPrimaryKey is true
+      if (updatedField.isPrimaryKey)
+      {
+        updatedFields[index].isNullable = false;
+      }
+
+      // Ensure nullable is false when field is the subscriber key
+      if (deConfig.subscriberKey === updatedFields[index].name)
+      {
+        updatedFields[index].isNullable = false;
+      }
+
       return { ...prev, fields: updatedFields };
+    });
+  };
+
+  const handleSubscriberKeyChange = (selectedKey: string) =>
+  {
+    setDeConfig((prev) =>
+    {
+      const updatedFields = prev.fields.map((field) => ({
+        ...field,
+        isNullable: field.name === selectedKey ? false : field.isNullable, // Ensure subscriberKey field is not nullable
+      }));
+
+      return {
+        ...prev,
+        subscriberKey: selectedKey,
+        fields: updatedFields,
+      };
     });
   };
 
@@ -334,38 +385,37 @@ export default function Upload()
 
 
   return (
-    <div className="items-center gap-8 w-full p-8">
+    <><div className="items-center gap-8 w-full p-8">
       {showAlert.shown && (
         <div className="mb-5">
-          <Alert
-            title={showAlert.title}
-            color={showAlert.type === "success" ? "success" : "danger"}
-            onClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
-          >
-            {showAlert.description}
-          </Alert>
+          <IconSettings iconPath="/icons">
+            <AlertContainer>
+              <Alert
+                dismissable={true}
+                icon={showAlert.type === "danger" ? <Icon category="utility" name="error" /> : <Icon category="utility" name="info" />}
+                labels={{
+                  heading: `${showAlert.title} - ${showAlert.description}`,
+                }}
+
+                variant={showAlert.type === "success" ? "success" : "error"}
+                style={{ backgroundColor: showAlert.type === "success" ? "green" : "" }}
+
+                onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
+              >
+                {showAlert.description}
+              </Alert>
+            </AlertContainer>
+          </IconSettings>
         </div>
       )}
       {/* Header */}
+
+
       <div className="flex w-full items-center justify-between">
-        <h1 className="text-3xl font-bold text-primary">Welcome, {userInfo.name}</h1>
-        <h2>You are logged into {userInfo.businessUnitId}</h2>
+
+
         <h1 className="text-3xl font-bold text-primary">Upload CSV</h1>
 
-        {file.name && tableData.length > 0 && (
-
-          <Button
-            onPress={createDataExtension}
-            size="md"
-            color="primary"
-            className="text-white"
-            isLoading={saving}
-            isDisabled={saving}
-          >
-            Create
-          </Button>
-
-        )}
 
       </div>
 
@@ -373,14 +423,14 @@ export default function Upload()
         Add a CSV file to create a new data extension.
       </p>
 
-      {/* Motion Containers */}
       <div className="w-full gap-4">
         {/* Table Panel */}
-        <div
-          className={`grid grid-cols-1 items-center bg-gray-50 rounded-lg p-6 shadow  cursor-pointer ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
-        >
-          <div className="w-full">
-            {!file.name ? (
+
+        {!file.name ? (
+          <div
+            className={`grid grid-cols-1 items-center bg-gray-50 rounded-lg p-6 shadow  cursor-pointer ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
+          >
+            <div className="w-full">
               <div
                 onDragOver={(e) =>
                 {
@@ -411,7 +461,8 @@ export default function Upload()
                             url: blobUrl,
                             type: file.type,
                           });
-                        } else
+                        }
+                        else
                         {
                           alert(
                             "Invalid file type. Please upload a CSV file."
@@ -421,8 +472,7 @@ export default function Upload()
                     });
                   }
                 }}
-                className={`${fileEntered ? "border-4" : "border-2"
-                  } mx-auto bg-white flex flex-col w-full max-w-xs h-72 border-dashed items-center justify-center`}
+                className={`${fileEntered ? "border-4" : "border-2"} mx-auto bg-white flex flex-col w-full max-w-xs h-72 border-dashed items-center justify-center`}
               >
                 <label
                   htmlFor="file"
@@ -447,256 +497,278 @@ export default function Upload()
                         type: files[0].type,
                       });
                     }
-                  }}
-
-                />
+                  }} />
               </div>
-            ) : (
-              <div className="relative rounded-md w-full h-24 bg-white flex flex-col items-center justify-center px-10">
-                <p className="text-xl text-darkGray">{file.name}</p>
+            </div>
+          </div>
+        ) : (
+          <div
+            className={`grid grid-cols-2 items-center p-3 ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
+          >
+            <div className="w-full">
+              <div className="relative gap-4 items-center justify-between">
+
+                <Files id={file.name} className="flex-1 flex-row gap-4 items-center justify-between">
+                  <div className="relative">
+                    {/* File Component */}
+                    <File
+                      id={file.name}
+                      labels={{
+                        title: `${file.name}`,
+                      }}
+                      assistiveText={{
+                        image: "Placeholder image",
+                      }}
+                      className="flex-1 h-[10em] w-[10em]"
+                      image={`${file.type === "text/csv" ? "/icons/doctype/csv.svg" : "/file.svg"}`}
+                    />
+
+
+                  </div>
+                </Files>
+                {/* X Icon */}
                 <XMarkIcon
-                  className="absolute top-4 right-4 w-6 h-6 text-red-500 cursor-pointer"
+                  className="absolute top-0 left-20 ml-[45px] w-6 h-6 text-red-500 cursor-pointer"
                   onClick={handleResetFile}
                 />
               </div>
-            )}
-            {file.name && tableData.length === 0 && (
-              <Button
-                onPress={() => uploadFile()}
-                size="md"
-                color="secondary"
-                className="text-darkGray my-5"
-                isLoading={tableLoading}
-                isDisabled={tableLoading}
-              >
-                Go
-              </Button>
-            )}
-            {file.name && tableData.length > 0 && (
-              <Table
-                isStriped
-                isHeaderSticky={true}
-                aria-label={file.name}
-                classNames={{
-                  base: "max-h-[520px] overflow-scroll max-w-7xl",
-                  table: "min-h-[420px]",
-                }}
-              >
-                <TableHeader>
-                  {Object.keys(tableData[0]).map((key) => (
-                    <TableColumn key={key}>{key}</TableColumn>
-                  ))}
-                </TableHeader>
-                <TableBody emptyContent={"This file contains no rows."}>
-                  {tableData.slice(0, 100).map((row, index) => (
-                    <TableRow key={index}>
-                      {Object.values(row).map((cell: any, cellIndex) => (
-                        <TableCell key={cellIndex}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            {tableData.length >= 100 && (
-              <div>
-                <p>Only the first 100 rows of data are displayed</p>
-              </div>
-            )}
+              {file.name && tableData.length === 0 && (
+
+                <Button
+                  onClick={uploadFile}
+                  variant="brand"
+                  style={{ width: '5em', height: '3em', marginTop: 20 }}
+
+                  label={tableLoading ?
+                    <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
+                      <Spinner size="x-small" variant="inverse" hasContainer={false} />
+                    </div> : "Go"}
+                  disabled={tableLoading}
+                />
+
+              )}
+            </div>
+
           </div>
-        </div>
+        )}
+
 
         {/* Form Panel */}
         {tableData.length > 0 && (
-          <div className="w-full bg-white rounded-lg p-6 shadow">
-            <h2 className="text-xl font-bold text-primary my-2">Data Extension Configuration</h2>
+          <div className="w-full mt-5">
+
             <div className="flex flex-row gap-4">
 
-              <Input
-                label="Name"
-                defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
-                size="md"
-                onChange={(e) =>
-                  setDeConfig((prev) => ({ ...prev, name: e.target.value }))
-                }
-              />
-              <div className="w-full bg-white rounded-lg p-6 shadow flex-col flex gap-4">
-                <Checkbox
-                  isSelected={deConfig.isSendable}
-                  onChange={(e) =>
-                    setDeConfig((prev) => ({
-                      ...prev,
-                      isSendable: e.target.checked,
-                      subscriberKey: e.target.checked ? prev.subscriberKey : undefined, // Clear subscriberKey if not sendable
-                    }))
-                  }
-                >
-                  Is Sendable
-                </Checkbox>
-                {deConfig.isSendable && (
-                  <div>
-                    <Select
-                      isRequired={true}
-                      label="Subscriber Key Field"
-                      placeholder="Select Field"
-                      selectedKeys={new Set([deConfig.subscriberKey || ""])}
-                      onChange={(selectedKey) =>
-                        setDeConfig((prev) => ({ ...prev, subscriberKey: selectedKey.target.value }))
-                      }
-                    >
-                      {deConfig.fields.map((field) => (
-                        <SelectItem key={field.name} value={field.name}>
-                          {field.name}
-                        </SelectItem>
-                      ))}
-                    </Select>
-                  </div>
-                )}
-                <Checkbox
-                  isSelected={deConfig.isTestable}
-                  onChange={(e) =>
-                    setDeConfig((prev) => ({ ...prev, isTestable: e.target.checked }))
-                  }
-                >
-                  Is Testable
-                </Checkbox>
-              </div>
-            </div>
+              <Card id="DEName-Card" heading="Data Extension Configuration" className="w-full mb-10">
+                <div className="px-4">
+                  <Input
+                    label="Name"
+                    defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
+                    size="lg"
+                    onChange={(e: any) => setDeConfig((prev) => ({ ...prev, name: e.target.value }))}
+                    className="pb-5"
+                  />
 
+                  <div className="w-full flex-col flex gap-4 mb-5">
+                    <div className="flex-rows flex gap-x-4">
+                      <Checkbox
+                        isSelected={deConfig.isSendable}
+                        labels={{ label: "Is Sendable" }}
+                        onChange={(e: any) => setDeConfig((prev) => ({
+                          ...prev,
+                          isSendable: e.target.checked,
+                          subscriberKey: e.target.checked ? prev.subscriberKey : undefined, // Clear subscriberKey if not sendable
+                        }))}
 
-            <h3 className="text-lg font-bold text-primary my-2">Data Extension Fields Configuration</h3>
-            <Table isHeaderSticky={true} aria-label="Fields">
-              <TableHeader>
-                <TableColumn>Field</TableColumn>
-                <TableColumn>Type</TableColumn>
-                <TableColumn>Length</TableColumn>
-                <TableColumn>Primary Key</TableColumn>
-                <TableColumn>Nullable</TableColumn>
-                <TableColumn>Default value</TableColumn>
-              </TableHeader>
-              <TableBody>
-                {deConfig.fields.map((field, index) => (
-                  <TableRow key={index}>
-                    <TableCell>
-                      <Input
-                        defaultValue={field.name}
-                        label="Name"
-                        size="sm"
-                        onChange={(e) =>
-                          updateField(index, { name: e.target.value })
-                        }
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        label={"Type"}
-                        placeholder="Data Type"
-                        selectedKeys={new Set([field.type])}
-                        onChange={(selectedKey) =>
-                        {
-                          const newType = selectedKey.target.value as string;
 
-                          // Remove length for Decimal fields and set default precision/scale
-                          const updatedField: Partial<field> = {
-                            type: newType,
-                            length: newType === "Decimal" ? undefined : typeToLengthMap[newType] || "",
-                            precision: newType === "Decimal" ? "18" : undefined,
-                            scale: newType === "Decimal" ? "0" : undefined,
-                          };
-
-                          updateField(index, updatedField);
-                        }}
-                        aria-hidden={false}
+                      <Checkbox
+                        isSelected={deConfig.isTestable}
+                        labels={{ label: "Is Testable" }}
+                        onChange={(e: any) => setDeConfig((prev) => ({ ...prev, isTestable: e.target.checked }))}
                       >
-                        {fieldTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {type}
-                          </SelectItem>
-                        ))}
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      {field.type === "Decimal" ? (
+                        Is Testable
+                      </Checkbox>
+                    </div>
+                    {deConfig.isSendable && (
+                      <div>
+                        <Select
+                          isRequired={true}
 
-                        <div className="flex flex-row gap-2">
+                          placeholder="Select SubscriberKey Field"
+                          selectedKeys={new Set([deConfig.subscriberKey || ""])}
+                          onChange={(selectedKey) => handleSubscriberKeyChange(selectedKey.target.value)}
+                          variant="bordered"
+                          radius="sm"
+
+                        >
+                          {deConfig.fields.map((field) => (
+                            <SelectItem key={field.name} value={field.name}>
+                              {field.name}
+                            </SelectItem>
+                          ))}
+                        </Select>
+                      </div>
+                    )}
+
+
+                  </div>
+                </div>
+              </Card>
+
+
+            </div>
+            <div className="flex flex-row gap-4">
+              <Card id="DEName-Card" heading="Field Configuration" className="w-full mb-10">
+
+
+                <Table isHeaderSticky={true} aria-label="Fields" shadow="none">
+                  <TableHeader>
+                    <TableColumn className="bg-transparent">Field</TableColumn>
+                    <TableColumn className="bg-transparent">Type</TableColumn>
+                    <TableColumn className="bg-transparent">Length</TableColumn>
+                    <TableColumn className="bg-transparent">Primary Key</TableColumn>
+                    <TableColumn className="bg-transparent">Nullable</TableColumn>
+                    <TableColumn className="bg-transparent">Default value</TableColumn>
+                  </TableHeader>
+                  <TableBody>
+                    {deConfig.fields.map((field, index) => (
+                      <TableRow key={index}>
+                        <TableCell>
                           <Input
-                            label="Precision"
+                            defaultValue={field.name}
+
                             size="sm"
-                            type="number"
-                            value={field.precision || "18"} // Default precision
-                            onChange={(e) => updateField(index, { precision: e.target.value })}
+                            onChange={(e: any) => updateField(index, { name: e.target.value })}
                           />
+                        </TableCell>
+                        <TableCell>
+                          <Select
+                            radius="sm"
+                            variant="bordered"
+                            size="sm"
+                            placeholder="Field Type"
+                            selectedKeys={new Set([field.type])}
+                            onChange={(selectedKey) =>
+                            {
+                              const newType = selectedKey.target.value as string;
+
+                              // Remove length for Decimal fields and set default precision/scale
+                              const updatedField: Partial<field> = {
+                                type: newType,
+                                length: newType === "Decimal" ? undefined : typeToLengthMap[newType] || "",
+                                precision: newType === "Decimal" ? "18" : undefined,
+                                scale: newType === "Decimal" ? "0" : undefined,
+                              };
+
+                              updateField(index, updatedField);
+                            }}
+
+                          >
+                            {fieldTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {type}
+                              </SelectItem>
+                            ))}
+                          </Select>
+                        </TableCell>
+
+                        <TableCell>
+                          {field.type === "Decimal" ? (
+                            <div className="flex flex-row gap-2">
+                              <Input
+
+                                size="sm"
+                                type="number"
+                                value={field.precision || "18"}
+                                onChange={(e: any) => updateField(index, { precision: e.target.value })}
+                              />
+                              <Input
+
+                                size="sm"
+                                type="number"
+                                value={field.scale || "0"}
+                                onChange={(e: any) => updateField(index, { scale: e.target.value })}
+                              />
+                            </div>
+                          ) : (
+                            <Input
+
+                              size="sm"
+                              type="number"
+                              value={field.length}
+                              onChange={(e: any) => updateField(index, { length: e.target.value })}
+                              disabled={field.type !== "Text"}
+                            />
+                          )}
+                        </TableCell>
+
+                        <TableCell>
+                          <Checkbox
+                            isSelected={field.isPrimaryKey}
+                            onChange={(e: any) =>
+                              updateField(index, {
+                                isPrimaryKey: e.target.checked,
+                                isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
+                              })
+                            }
+
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Checkbox
+                            isSelected={field.isNullable}
+                            disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name} // Disable if primary key or subscriber key
+                            onChange={(e: any) => updateField(index, { isNullable: e.target.checked })}
+
+                          />
+                        </TableCell>
+                        <TableCell>
                           <Input
-                            label="Scale"
+
                             size="sm"
-                            type="number"
-                            value={field.scale || "0"} // Default scale
-                            onChange={(e) => updateField(index, { scale: e.target.value })}
-                          />
-                        </div>
+                            defaultValue={field.defaultValue}
+                            onChange={(e: any) =>
+                              updateField(index, {
+                                defaultValue: e.target.value,
+                              })
+                            }
+                            disabled={field.type === "EmailAddress" ||
+                              field.type === 'Phone' ||
+                              field.type === 'Locale'
+                              || field.isPrimaryKey
+                              || deConfig.subscriberKey === field.name
+                              ? true : false} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
+          </div>
 
-                      ) : (
-                        <Input
-                          label="Length"
-                          size="sm"
-                          type="number"
-                          value={field.length}
-                          onChange={(e) => updateField(index, { length: e.target.value })}
-                          isDisabled={
-                            field.type !== "Text"
-                          }
-                        />
-                      )}
-                    </TableCell>
-
-
-                    <TableCell>
-                      <Checkbox
-                        isSelected={field.isPrimaryKey}
-                        onChange={(e) =>
-                          updateField(index, {
-                            isPrimaryKey: e.target.checked,
-                            isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
-                          })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Checkbox
-                        isSelected={field.isNullable}
-                        isDisabled={field.isPrimaryKey} // Disable if primary key
-                        onChange={(e) =>
-                          updateField(index, { isNullable: e.target.checked })
-                        }
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        label="Default Value"
-                        size="sm"
-                        defaultValue={field.defaultValue}
-                        onChange={(e) =>
-                          updateField(index, {
-                            defaultValue: e.target.value,
-                          })
-                        }
-                        isDisabled={
-                          field.type === "EmailAddress" ||
-                            field.type === 'Phone' ||
-                            field.type === 'Locale'
-                            || field.isPrimaryKey
-                            ? true : false
-                        }
-                      />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+        )}
+        {file.name && tableData.length > 0 && (
+          <div>
+            <Button
+              style={{ height: '3em' }}
+              onClick={createDataExtension}
+              variant="brand"
+              className="w-full"
+              label={saving ?
+                <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
+                  <Spinner size="x-small" variant="inverse" hasContainer={false} />
+                </div> : "Create"}
+              disabled={saving}
+            />
           </div>
         )}
+
       </div>
-    </div>
+
+    </div ></>
+
   );
 }
 
@@ -753,3 +825,36 @@ export default function Upload()
 
 //   );
 // }
+
+
+{/* {file.name && tableData.length > 0 && (
+              <Table
+                isStriped
+                isHeaderSticky={true}
+                aria-label={file.name}
+                classNames={{
+                  base: "max-h-[520px] overflow-scroll max-w-7xl",
+                  table: "min-h-[420px]",
+                }}
+              >
+                <TableHeader>
+                  {Object.keys(tableData[0]).map((key) => (
+                    <TableColumn key={key}>{key}</TableColumn>
+                  ))}
+                </TableHeader>
+                <TableBody emptyContent={"This file contains no rows."}>
+                  {tableData.slice(0, 100).map((row, index) => (
+                    <TableRow key={index}>
+                      {Object.values(row).map((cell: any, cellIndex) => (
+                        <TableCell key={cellIndex}>{cell}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {tableData.length >= 100 && (
+              <div>
+                <p>Only the first 100 rows of data are displayed</p>
+              </div>
+            )} */}

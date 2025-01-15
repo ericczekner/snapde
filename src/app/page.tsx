@@ -45,17 +45,15 @@ export default function Upload()
     {
       try
       {
-
-
-        // Get the hostname and stack information
-        const hostname = window.location.hostname;
-        const stackInfo = await getStackInfo(hostname);
-        console.log(hostname)
+        // Extract stack information
+        const stackInfo = await getStackInfo();
         if (!stackInfo)
         {
-          setError("You do not appear to be logged into Marketing Cloud.");
+          setError("You do not appear to be logged into Salesforce Marketing Cloud.");
           return;
         }
+
+        console.log("Stack Info:", stackInfo);
 
         // Validate the user session
         const user = await validateUser(stackInfo.urlEtmc);
@@ -69,7 +67,7 @@ export default function Upload()
         setUserInfo(user);
       } catch (err)
       {
-
+        console.error("Unexpected error during initialization:", err);
         setError("An unexpected error occurred. Please try again.");
       } finally
       {

@@ -17,8 +17,7 @@ import
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import Cookies from "js-cookie";
-import axios from "axios";
+import { getStackInfo, validateUser } from "../lib/auth";
 
 type field = {
   name: string,
@@ -35,36 +34,52 @@ type field = {
 
 export default function Upload()
 {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null)
+  const [userInfo, setUserInfo] = useState<any>(null)
 
-  const [clientId, setClientId] = useState("3gmzeu2sklbmycgptuq902rm");
-  const [clientSecret, setClientSecret] = useState("NGAv65JeDOdRtPJzXRpk1bxy");
-  const [error, setError] = useState("");
-
-  const handleTokenRequest = async () =>
-  {
-    try
-    {
-      const response = await axios.post('http://localhost:3000/api/auth', { clientId, clientSecret })
-      const { accessToken } = response.data;
-      Cookies.set('sessionToken', accessToken, { secure: true, httpOnly: true })
-      console.log(accessToken)
-
-    }
-    catch (err: any)
-    {
-      setError("Failed to generate token")
-    }
-  }
 
   useEffect(() =>
   {
-    const token = Cookies.get('sessionToken')
-    if (!token)
+    const init = async () =>
     {
-      handleTokenRequest()
-    }
+      try
+      {
 
-  }, [])
+
+        // Get the hostname and stack information
+        const hostname = window.location.hostname;
+        const stackInfo = await getStackInfo(hostname);
+        console.log(hostname)
+        if (!stackInfo)
+        {
+          setError("You do not appear to be logged into Marketing Cloud.");
+          return;
+        }
+
+        // Validate the user session
+        const user = await validateUser(stackInfo.urlEtmc);
+        if (!user)
+        {
+          setError("You are not logged in to Salesforce Marketing Cloud.");
+          return;
+        }
+
+        // Set the user information
+        setUserInfo(user);
+      } catch (err)
+      {
+
+        setError("An unexpected error occurred. Please try again.");
+      } finally
+      {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, []);
+
 
 
   const [file, setFile] = useState({ name: "", url: "", type: "" });
@@ -309,6 +324,15 @@ export default function Upload()
     return "Text";
   };
 
+  if (loading)
+  {
+    return <div>Loading...</div>
+  }
+
+  if (error)
+  {
+    return <div>Error: {error}</div>
+  }
 
 
   return (
@@ -326,6 +350,8 @@ export default function Upload()
       )}
       {/* Header */}
       <div className="flex w-full items-center justify-between">
+        <h1 className="text-3xl font-bold text-primary">Welcome, {userInfo.name}</h1>
+        <h2>You are logged into {userInfo.businessUnitId}</h2>
         <h1 className="text-3xl font-bold text-primary">Upload CSV</h1>
 
         {file.name && tableData.length > 0 && (

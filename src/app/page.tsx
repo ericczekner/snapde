@@ -33,9 +33,6 @@ type field = {
 }
 
 
-
-
-
 export default function Upload()
 {
   const [loading, setLoading] = useState(false);
@@ -132,6 +129,7 @@ export default function Upload()
   const uploadFile = async () =>
   {
     setTableLoading(true);
+
     if (file.url)
     {
       const response = await fetch(file.url);
@@ -144,53 +142,31 @@ export default function Upload()
         {
           console.log("Parsed CSV Data: ", result.data);
 
-          const fieldArr: field[] = Object.keys(result.data[0] || {}).map((key) =>
+          // Check if there is any data in the CSV
+          const headers = result.meta.fields || []; // Extract headers
+          const hasData = result.data && result.data.length > 0;
+
+          if (!headers.length)
           {
-            const columnValues = result.data.map((row) => row[key] || "").slice(0, 100); // Take first 100 values for sampling
-            const guessedType = guessFieldType(columnValues);
+            console.error("The uploaded CSV has no column headers.");
+            setError("The uploaded CSV has no column headers. Please check the file and try again.");
+            setTableLoading(false);
+            return;
+          }
 
-            // Default precision and scale
-            let precision: string | undefined;
-            let scale: string | undefined;
+          // Generate field configuration based on headers
+          const fieldArr: field[] = headers.map((key) => ({
+            name: key,
+            type: "Text", // Default to 'Text' for all fields
+            length: "50",
+            precision: undefined,
+            scale: undefined,
+            isPrimaryKey: false,
+            isNullable: true,
+            defaultValue: "",
+          }));
 
-            if (guessedType === "Decimal")
-            {
-              let maxPrecision = 0;
-              let maxScale = 0;
-
-              columnValues.forEach((value) =>
-              {
-                if (!isNaN(Number(value)))
-                {
-                  const [integerPart, fractionalPart] = value.split(".");
-                  const integerDigits = integerPart?.length || 0;
-                  const fractionalDigits = fractionalPart?.length || 0;
-
-                  maxPrecision = Math.max(maxPrecision, integerDigits + fractionalDigits);
-                  maxScale = Math.max(maxScale, fractionalDigits);
-                }
-              });
-
-              precision = maxPrecision.toString();
-              scale = maxScale.toString();
-            }
-
-            return {
-              name: key,
-              type: guessedType,
-              length: guessedType === "Text" || guessedType === "Phone" ? "50" :
-                guessedType === "EmailAddress" ? "254" :
-                  guessedType === "Locale" ? "5" :
-                    "",
-              precision: precision,
-              scale: scale,
-              isPrimaryKey: false,
-              isNullable: true,
-              defaultValue: "",
-            };
-          });
-
-
+          // Update state
           setDeConfig({
             name: file.name.substring(0, file.name.indexOf(".csv")),
             fields: fieldArr,
@@ -198,7 +174,13 @@ export default function Upload()
             isTestable: false,
           });
 
-          setTableData(result.data as any);
+          // Set data table
+          setTableData(hasData ? result.data as any : []);
+
+          if (!hasData)
+          {
+            console.warn("The uploaded CSV has no data, only column headers.");
+          }
         },
         error: (err) =>
         {
@@ -209,6 +191,7 @@ export default function Upload()
     {
       console.error("No file to upload");
     }
+
     setTableLoading(false);
   };
 
@@ -243,7 +226,7 @@ export default function Upload()
       return;
     }
 
-    console.log(tableData)
+    console.log(deConfig)
     const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",
       headers: {
@@ -281,7 +264,11 @@ export default function Upload()
     setDeConfig((prev) =>
     {
       const updatedFields = [...prev.fields];
-      updatedFields[index] = { ...updatedFields[index], ...updatedField };
+      updatedFields[index] = {
+        ...updatedFields[index],
+        ...updatedField,
+        type: updatedField.type || "Text", // Ensure type is never undefined
+      };
 
       // Ensure nullable is false when isPrimaryKey is true
       if (updatedField.isPrimaryKey)
@@ -532,7 +519,7 @@ export default function Upload()
                   onClick={handleResetFile}
                 />
               </div>
-              {file.name && tableData.length === 0 && (
+              {file.name && (
 
                 <Button
                   onClick={uploadFile}
@@ -554,7 +541,7 @@ export default function Upload()
 
 
         {/* Form Panel */}
-        {tableData.length > 0 && (
+        {file.name && deConfig.name && (
           <div className="w-full mt-5">
 
             <div className="flex flex-row gap-4">
@@ -648,22 +635,20 @@ export default function Upload()
                             variant="bordered"
                             size="sm"
                             placeholder="Field Type"
-                            selectedKeys={new Set([field.type])}
+                            selectedKeys={new Set([field.type || "Text"])} // Default to 'Text'
                             onChange={(selectedKey) =>
                             {
                               const newType = selectedKey.target.value as string;
 
-                              // Remove length for Decimal fields and set default precision/scale
-                              const updatedField: Partial<field> = {
+                              // Update the field with the selected type
+                              updateField(index, {
                                 type: newType,
                                 length: newType === "Decimal" ? undefined : typeToLengthMap[newType] || "",
                                 precision: newType === "Decimal" ? "18" : undefined,
                                 scale: newType === "Decimal" ? "0" : undefined,
-                              };
-
-                              updateField(index, updatedField);
+                              });
                             }}
-
+                            style={{ minWidth: 150 }}
                           >
                             {fieldTypes.map((type) => (
                               <SelectItem key={type} value={type}>
@@ -749,7 +734,7 @@ export default function Upload()
           </div>
 
         )}
-        {file.name && tableData.length > 0 && (
+        {file.name && deConfig.name && (
           <div>
             <Button
               style={{ height: '3em' }}

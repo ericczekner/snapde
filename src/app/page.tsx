@@ -338,36 +338,41 @@ export default function Upload()
     const phoneRegex = /^\+?1?\d{10}$/;
     const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$|^\d{2}\/\d{2}\/\d{2}$|^\d{2}\/\d{2}\/\d{4} \d{1,2}:\d{2}(AM|PM)$/i;
     const localeRegex = /^[a-z]{2}-[a-z]{2}$/i; // Matches en-US, fr-FR, en-us, en-ca
+    const numberRegex = /^-?\d+(,\d{3})*(\.\d+)?$/;
+
+    // Trim values
+    const trimmedData = columnData.map(value => value.trim());
 
     // Check for Boolean
-    const isBoolean = columnData.every(
+    const isBoolean = trimmedData.every(
       (value) => ["true", "false", "1", "0", "yes", "no"].includes(value.toLowerCase())
     );
     if (isBoolean) return "Boolean";
 
     // Check for Email
-    const isEmail = columnData.every((value) => emailRegex.test(value));
+    const isEmail = trimmedData.every((value) => emailRegex.test(value));
     if (isEmail) return "EmailAddress";
 
     // Check for Phone
-    const isPhone = columnData.every((value) => phoneRegex.test(value));
+    const isPhone = trimmedData.every((value) => phoneRegex.test(value));
     if (isPhone) return "Phone";
 
     // Check for Date
-    const isDate = columnData.every((value) => dateRegex.test(value));
+    const isDate = trimmedData.every((value) => dateRegex.test(value));
     console.log("isDate", isDate);
     if (isDate) return "Date";
 
     // Check for Locale
-    const isLocale = columnData.every((value) => localeRegex.test(value));
+    const isLocale = trimmedData.every((value) => localeRegex.test(value));
     if (isLocale) return "Locale";
 
     // Check for Decimal
-    const isDecimal = columnData.every((value) => !isNaN(parseFloat(value)) && value.includes("."));
+    const isDecimal = trimmedData.every((value) => !isNaN(parseFloat(value.replace(/,/g, ''))) && value.includes("."));
     if (isDecimal) return "Decimal";
 
     // Check for Number
-    const isNumber = columnData.every((value) => !isNaN(parseInt(value)) && !value.includes("."));
+    const isNumber = trimmedData.every((value) => numberRegex.test(value));
+    console.log("isNumber", isNumber);
     if (isNumber) return "Number";
 
     // Default to Text

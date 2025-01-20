@@ -54,8 +54,8 @@ export default function RootLayout({
               </div>
             </div>
           </header> */}
-          <div className="grid items-center justify-items-center  p-8 pb-20 gap-16 sm:p-20 font-sans">
-            <main className="flex flex-col gap-8 sm:items-start">
+          <div className="grid font-sans">
+            <main className="flex  gap-8 sm:items-start">
               {children}
             </main>
           </div>

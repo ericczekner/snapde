@@ -154,10 +154,12 @@ export default function Upload()
             return;
           }
 
+          const columnData = headers.map((header) => result.data.map((row) => row[header]));
+
           // Generate field configuration based on headers
-          const fieldArr: field[] = headers.map((key) => ({
+          const fieldArr: field[] = headers.map((key, index) => ({
             name: key,
-            type: "Text", // Default to 'Text' for all fields
+            type: hasData ? guessFieldType(columnData[index]) : "Text", // Guess type if data exists
             length: "50",
             precision: undefined,
             scale: undefined,
@@ -210,30 +212,32 @@ export default function Upload()
   };
 
 
+
+
   const createDataExtension = async () =>
   {
-    setSaving(true)
+    setSaving(true);
     setShowAlert({
       shown: false,
       title: "",
       description: "",
       type: "success",
-    })
+    });
 
     if (deConfig.isSendable && deConfig.subscriberKey === undefined)
     {
-      alert("Please select a subscriber key field")
+      alert("Please select a subscriber key field");
       return;
     }
 
-    console.log(deConfig)
-    const res = await fetch('https://snapde.vercel.app/api/create-de', {
+    console.log(deConfig);
+    const res = await fetch('/api/create-de', {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ deConfig, file: tableData }),
-    })
+    });
 
     const data = await res.json();
 
@@ -244,21 +248,31 @@ export default function Upload()
         title: "Data Extension Created",
         description: "Data Extension has been created successfully",
         type: "success",
-      })
-      handleResetFile()
-    }
-    else
+      });
+      handleResetFile();
+
+      // Automatically close the alert after 5 seconds
+      setTimeout(() =>
+      {
+        setShowAlert({ shown: false, title: "", description: "", type: "success" });
+      }, 5000);
+    } else
     {
       setShowAlert({
         shown: true,
         title: "Error",
         description: data.error,
         type: "danger",
-      })
-    }
-    setSaving(false)
-  }
+      });
 
+      // Automatically close the alert after 5 seconds
+      setTimeout(() =>
+      {
+        setShowAlert({ shown: false, title: "", description: "", type: "success" });
+      }, 5000);
+    }
+    setSaving(false);
+  };
   const updateField = (index: number, updatedField: Partial<field>) =>
   {
     setDeConfig((prev) =>
@@ -267,7 +281,7 @@ export default function Upload()
       updatedFields[index] = {
         ...updatedFields[index],
         ...updatedField,
-        type: updatedField.type || "Text", // Ensure type is never undefined
+        type: updatedField.type || updatedFields[index].type, // Use existing type if not updated
       };
 
       // Ensure nullable is false when isPrimaryKey is true
@@ -381,16 +395,32 @@ export default function Upload()
                 dismissable={true}
                 icon={showAlert.type === "danger" ? <Icon category="utility" name="error" /> : <Icon category="utility" name="info" />}
                 labels={{
-                  heading: `${showAlert.title} - ${showAlert.description}`,
-                }}
+                  heading: (
+                    <>
+                      {showAlert.title} - {showAlert.description}
+                      {/* <button
+                        style={{
+                          marginLeft: '20px',
 
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          color: 'white',
+                          cursor: 'pointer',
+
+                        }}
+                        onClick={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
+                      >
+                        <XMarkIcon className="w-5 h-5 text-white-500" />
+                      </button> */}
+                    </>
+                  ),
+                }}
                 variant={showAlert.type === "success" ? "success" : "error"}
                 style={{ backgroundColor: showAlert.type === "success" ? "green" : "" }}
-
                 onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
-              >
-                {showAlert.description}
-              </Alert>
+              />
+
+
             </AlertContainer>
           </IconSettings>
         </div>
@@ -519,7 +549,7 @@ export default function Upload()
                   onClick={handleResetFile}
                 />
               </div>
-              {file.name && (
+              {file.name && !deConfig.name && (
 
                 <Button
                   onClick={uploadFile}
@@ -629,13 +659,14 @@ export default function Upload()
                             onChange={(e: any) => updateField(index, { name: e.target.value })}
                           />
                         </TableCell>
-                        <TableCell>
+                        <TableCell aria-hidden="false">
                           <Select
                             radius="sm"
                             variant="bordered"
                             size="sm"
                             placeholder="Field Type"
                             selectedKeys={new Set([field.type || "Text"])} // Default to 'Text'
+
                             onChange={(selectedKey) =>
                             {
                               const newType = selectedKey.target.value as string;
@@ -667,12 +698,14 @@ export default function Upload()
                                 type="number"
                                 value={field.precision || "18"}
                                 onChange={(e: any) => updateField(index, { precision: e.target.value })}
+                                disabled={field.type !== "Decimal"}
                               />
                               <Input
 
                                 size="sm"
                                 type="number"
                                 value={field.scale || "0"}
+                                disabled={field.type !== "Decimal"}
                                 onChange={(e: any) => updateField(index, { scale: e.target.value })}
                               />
                             </div>

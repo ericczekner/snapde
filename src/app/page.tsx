@@ -231,7 +231,7 @@ export default function Upload()
     }
 
     console.log(deConfig);
-    const res = await fetch('/api/create-de', {
+    const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'

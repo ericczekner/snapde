@@ -159,7 +159,7 @@ export default function Upload()
           // Generate field configuration based on headers
           const fieldArr: field[] = headers.map((key, index) => ({
             name: key,
-            type: hasData ? guessFieldType(columnData[index]) : "Text", // Guess type if data exists
+            type: hasData ? guessFieldType(columnData[index], key) : "Text", // Guess type if data exists
             length: "50",
             precision: undefined,
             scale: undefined,
@@ -243,12 +243,26 @@ export default function Upload()
 
     if (data.ok)
     {
-      setShowAlert({
-        shown: true,
-        title: "Data Extension Created",
-        description: "Data Extension has been created successfully",
-        type: "success",
-      });
+      console.log("Data: ", data);
+      if (data.deCreated === true && data.dataUploaded === true)
+      {
+        console.log("made it here")
+        setShowAlert({
+          shown: true,
+          title: "Data Extension Created and Data Uploaded!",
+          description: "Data Extension has been created and loaded successfully",
+          type: "success",
+        });
+      } else if (data.deCreated === true && data.dataUploaded === false)
+      {
+        console.log("Made it to the else if")
+        setShowAlert({
+          shown: true,
+          title: "Data extension created, but there was an error uploading data",
+          description: "The data extension was created successfully, but there was an error loading the data.",
+          type: "warning",
+        });
+      }
       handleResetFile();
 
       // Automatically close the alert after 5 seconds
@@ -273,6 +287,7 @@ export default function Upload()
     }
     setSaving(false);
   };
+
   const updateField = (index: number, updatedField: Partial<field>) =>
   {
     setDeConfig((prev) =>
@@ -331,11 +346,11 @@ export default function Upload()
   const fieldTypes = ["Text", "Number", "Date", "Boolean", "EmailAddress", "Phone", "Decimal", "Locale"];
 
   //helper function to try and determine a fields type
-  const guessFieldType = (columnData: string[]): string =>
+  const guessFieldType = (columnData: string[], columnHeader: string): string =>
   {
     // Regex patterns for different types
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\+?1?\d{10}$/;
+    const phoneRegex = /^\+?1?\d{10,15}$|^\d{10,15}$/; // Matches phone numbers with or without country code
     const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$|^\d{2}\/\d{2}\/\d{2}$|^\d{2}\/\d{2}\/\d{4} \d{1,2}:\d{2}(AM|PM)$/i;
     const localeRegex = /^[a-z]{2}-[a-z]{2}$/i; // Matches en-US, fr-FR, en-us, en-ca
     const numberRegex = /^-?\d+(,\d{3})*(\.\d+)?$/;
@@ -353,7 +368,13 @@ export default function Upload()
     const isEmail = trimmedData.every((value) => emailRegex.test(value));
     if (isEmail) return "EmailAddress";
 
-    // Check for Phone
+    // Check for Phone based on column header
+    if (columnHeader.toLowerCase().includes("phone"))
+    {
+      return "Phone";
+    }
+
+    // Check for Phone based on regex
     const isPhone = trimmedData.every((value) => phoneRegex.test(value));
     if (isPhone) return "Phone";
 
@@ -398,7 +419,7 @@ export default function Upload()
             <AlertContainer>
               <Alert
                 dismissable={true}
-                icon={showAlert.type === "danger" ? <Icon category="utility" name="error" /> : <Icon category="utility" name="info" />}
+                icon={showAlert.type === "danger" || showAlert.type === "warning" ? <Icon category="utility" name="error" /> : <Icon category="utility" name="info" />}
                 labels={{
                   heading: (
                     <>
@@ -420,8 +441,8 @@ export default function Upload()
                     </>
                   ),
                 }}
-                variant={showAlert.type === "success" ? "success" : "error"}
-                style={{ backgroundColor: showAlert.type === "success" ? "green" : "" }}
+                variant={showAlert.type === "error" ? "error" : showAlert.type === 'warning' ? "warning" : "success"}
+                style={{ backgroundColor: showAlert.type === "error" ? "red" : showAlert.type === 'warning' ? "orange" : "green" }}
                 onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
               />
 
@@ -740,10 +761,10 @@ export default function Upload()
                         </TableCell>
                         <TableCell>
                           <Checkbox
-                            isSelected={field.isNullable}
+
                             disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name} // Disable if primary key or subscriber key
                             onChange={(e: any) => updateField(index, { isNullable: e.target.checked })}
-
+                            checked={field.isNullable}
                           />
                         </TableCell>
                         <TableCell>

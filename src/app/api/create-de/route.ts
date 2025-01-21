@@ -102,6 +102,13 @@ export async function POST(req: NextRequest) {
 		}
 
 		const deKey = createRes.key;
+		let response = {
+			ok: true,
+			deCreated: true,
+			status: 200,
+			dataUploaded: false,
+			message: "",
+		};
 		const uploadURL = `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`;
 		const uploadBody: any[] = [];
 
@@ -135,10 +142,16 @@ export async function POST(req: NextRequest) {
 		});
 
 		const uploadRes = await uploadReq.json();
+		if (uploadRes.errorcode || uploadRes.errorcode === 0) {
+			response.dataUploaded = false;
+			response.message = uploadRes.message;
+		} else {
+			response.dataUploaded = true;
+		}
 
 		console.log(uploadRes);
 
-		return NextResponse.json({ ok: true, status: 200 });
+		return NextResponse.json(response);
 	} catch (err: any) {
 		console.log(err);
 		return NextResponse.json({

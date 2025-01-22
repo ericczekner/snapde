@@ -7,116 +7,59 @@ import
   TableColumn,
   TableRow,
   TableCell,
-
   Select,
-
   SelectItem,
-
 } from "@nextui-org/react";
-import { Button, Spinner, Files, File, Input, Checkbox, Card, Alert, AlertContainer, Icon, IconSettings } from "@salesforce/design-system-react";
-
-
+import
+{
+  Button,
+  Spinner,
+  Files,
+  File,
+  Input,
+  Checkbox,
+  Card,
+  Alert,
+  AlertContainer,
+  Icon,
+  IconSettings
+} from "@salesforce/design-system-react";
 import { useEffect, useState } from "react";
 import Papa from "papaparse";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { getStackInfo, validateUser } from "../lib/auth";
 
-type field = {
-  name: string,
-  type: string,
-  length: string,
-  precision?: string; // Total digits for Decimal fields
-  scale?: string; // Decimal places for Decimal fields
-  isPrimaryKey: boolean,
-  isNullable: boolean,
-  defaultValue: string
-}
+//import helper functions
+import { isCsv, guessFieldType, validateDeName, validateFieldName } from "../lib/helpers";
 
+//import types
+import { field } from "../lib/types";
+
+//import custom components
+import FolderTree from "@/components/FolderTree";
 
 export default function Upload()
 {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null)
-  const [userInfo, setUserInfo] = useState<any>({
-    "id": "NzE3MzM0MDgzOjQ6MQ",
-    "key": "7339a846-6129-40c7-90fb-753c918f7fa3",
-    "lastUpdated": "2025-01-08T13:45:48.963Z",
-    "createdDate": "2021-07-26T17:16:49.973Z",
-    "username": "eric.czekner_crossmarket",
-    "name": "Eric Czekner",
-    "locale": "en-US",
-    "utcOffset": "-05:00",
-    "email": "eric.czekner@slalom.com",
-    "isEtAdmin": false,
-    "businessUnitId": 7224602,
-    "businessUnitAccountTypeId": 8
-  })
 
-
-  //TODO: Implement authentication logic to properly set up the localized api routes we need.
-  // useEffect(() =>
-  // {
-  //   const init = async () =>
-  //   {
-  //     try
-  //     {
-  //       // Extract stack information
-  //       const stackInfo = await getStackInfo();
-  //       if (!stackInfo)
-  //       {
-  //         setError("You do not appear to be logged into Salesforce Marketing Cloud.");
-  //         return;
-  //       }
-
-  //       console.log("Stack Info:", stackInfo);
-
-  //       // Validate the user session
-  //       const user = await validateUser(stackInfo.urlEtmc);
-  //       if (!user)
-  //       {
-  //         setError("You are not logged in to Salesforce Marketing Cloud.");
-  //         return;
-  //       }
-
-  //       // Set the user information
-  //       setUserInfo(user);
-  //     } catch (err)
-  //     {
-  //       console.error("Unexpected error during initialization:", err);
-  //       setError("An unexpected error occurred. Please try again.");
-  //     } finally
-  //     {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   init();
-  // }, []);
-
+  const [dataFolders, setDataFolders] = useState([]);
+  const [loadingFolders, setLoadingFolders] = useState(true);
   const [file, setFile] = useState({ name: "", url: "", type: "" });
   const [fileEntered, setFileEntered] = useState(false);
-
   const [tableData, setTableData] = useState([]);
-  const [tableLoading, setTableLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [deConfig, setDeConfig] = useState<{
     name: string;
     fields: field[];
     isSendable: boolean;
     isTestable: boolean;
     subscriberKey?: string;
+    folderId?: string;
   }>({
     name: "",
     fields: [],
     isSendable: false,
     isTestable: false,
+    folderId: "",
   });
-
-  const isCsv = (file: any) =>
-  {
-    const validMimeTypes = ["text/csv", "application/vnd.ms-excel"];
-    return validMimeTypes.includes(file.type) || file.name.endsWith(".csv");
-  };
-
   const [showAlert, setShowAlert] = useState({
     shown: false,
     title: "",
@@ -124,49 +67,113 @@ export default function Upload()
     type: "success",
   });
 
-  const [saving, setSaving] = useState(false);
+  const [deNameError, setdeNameError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<{ [key: number]: string | null }>({});
+  const [uploading, setUploading] = useState(false);
 
-  const uploadFile = async () =>
+  useEffect(() =>
   {
-    setTableLoading(true);
 
+    async function fetchFolders()
+    {
+      const response = await fetch('https://snapde.vercel.app/api/get-folders');
+      const data = await response.json();
+      console.log(data)
+      setDataFolders(data);
+      setLoadingFolders(false);
+    }
+    fetchFolders();
+  }, [])
+
+  const uploadFile = async (file: any) =>
+  {
     if (file.url)
     {
+      setUploading(true);
       const response = await fetch(file.url);
       const fileBlob = await response.blob();
-
+      setFile({
+        name: file.name,
+        url: file.url,
+        type: file.type,
+      });
       Papa.parse<{ [key: string]: string }>(fileBlob as any, {
         header: true,
         skipEmptyLines: true,
         complete: (result) =>
         {
-          console.log("Parsed CSV Data: ", result.data);
-
           // Check if there is any data in the CSV
           const headers = result.meta.fields || []; // Extract headers
           const hasData = result.data && result.data.length > 0;
 
           if (!headers.length)
           {
-            console.error("The uploaded CSV has no column headers.");
-            setError("The uploaded CSV has no column headers. Please check the file and try again.");
-            setTableLoading(false);
+            setShowAlert({
+              shown: true,
+              title: "No headers found",
+              description: "The uploaded CSV has no column headers. Please check the file and try again.",
+              type: "danger",
+            });
+            setUploading(false);
             return;
           }
 
           const columnData = headers.map((header) => result.data.map((row) => row[header]));
 
-          // Generate field configuration based on headers
-          const fieldArr: field[] = headers.map((key, index) => ({
-            name: key,
-            type: hasData ? guessFieldType(columnData[index], key) : "Text", // Guess type if data exists
-            length: "50",
-            precision: undefined,
-            scale: undefined,
-            isPrimaryKey: false,
-            isNullable: true,
-            defaultValue: "",
-          }));
+          // Generate field configuration based on headers, check for validation errors
+          const fieldArr: field[] = headers.map((key, index) =>
+          {
+            const validationError = validateFieldName(key);
+            setFieldErrors((prevErrors) => ({
+              ...prevErrors,
+              [index]: validationError,
+            }));
+
+            const fieldType = hasData ? guessFieldType(columnData[index], key) : "Text";
+            let fieldLength: string | undefined = "50"; // Default length for Text
+
+            switch (fieldType)
+            {
+              case "EmailAddress":
+                fieldLength = "254";
+                break;
+              case "Phone":
+                fieldLength = "50";
+                break;
+              case "Locale":
+                fieldLength = "5";
+                break;
+              case "Number":
+              case "Date":
+              case "Boolean":
+                fieldLength = ""; // Empty string for these types
+                break;
+              case "Decimal":
+                fieldLength = ""; // Length is not applicable for Decimal
+                break;
+              default:
+                fieldLength = "50"; // Default length for Text
+                break;
+            }
+
+            return {
+              name: key,
+              type: fieldType,
+              length: fieldLength,
+              precision: undefined,
+              scale: undefined,
+              isPrimaryKey: false,
+              isNullable: true,
+              defaultValue: "",
+            };
+          });
+
+          const validationError = file.name ? validateDeName(file.name.substring(0, file.name.indexOf(".csv")) || "") : null;
+
+          if (validationError)
+          {
+            setdeNameError(validationError);
+          }
 
           // Update state
           setDeConfig({
@@ -176,28 +183,32 @@ export default function Upload()
             isTestable: false,
           });
 
-          // Set data table
           setTableData(hasData ? result.data as any : []);
 
+          setUploading(false);
           if (!hasData)
           {
-            console.warn("The uploaded CSV has no data, only column headers.");
+            setShowAlert({
+              shown: true,
+              title: "No data found",
+              description: "The uploaded CSV has no data, only column headers. Only a DE will be created.",
+              type: "info",
+            });
           }
         },
         error: (err) =>
         {
-          console.error("Error parsing CSV: ", err);
+          setShowAlert({
+            shown: true,
+            title: "Error parsing CSV",
+            description: `There was an error parsing the uploaded CSV. Please check the file and try again: ${err.message}`,
+            type: "danger",
+          });
+          setUploading(false);
         },
       });
-    } else
-    {
-      console.error("No file to upload");
     }
-
-    setTableLoading(false);
   };
-
-
   const handleResetFile = () =>
   {
     setFile({ name: "", url: "", type: "" });
@@ -210,9 +221,6 @@ export default function Upload()
       isTestable: false,
     });
   };
-
-
-
 
   const createDataExtension = async () =>
   {
@@ -230,7 +238,8 @@ export default function Upload()
       return;
     }
 
-    console.log(deConfig);
+    console.log("Saving DE: ", deConfig)
+
     const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",
       headers: {
@@ -246,7 +255,7 @@ export default function Upload()
       console.log("Data: ", data);
       if (data.deCreated === true && data.dataUploaded === true)
       {
-        console.log("made it here")
+
         setShowAlert({
           shown: true,
           title: "Data Extension Created and Data Uploaded!",
@@ -255,11 +264,11 @@ export default function Upload()
         });
       } else if (data.deCreated === true && data.dataUploaded === false)
       {
-        console.log("Made it to the else if")
+
         setShowAlert({
           shown: true,
           title: "Data extension created, but there was an error uploading data",
-          description: "The data extension was created successfully, but there was an error loading the data.",
+          description: data.message,
           type: "warning",
         });
       }
@@ -296,17 +305,10 @@ export default function Upload()
       updatedFields[index] = {
         ...updatedFields[index],
         ...updatedField,
-        type: updatedField.type || updatedFields[index].type, // Use existing type if not updated
       };
 
       // Ensure nullable is false when isPrimaryKey is true
       if (updatedField.isPrimaryKey)
-      {
-        updatedFields[index].isNullable = false;
-      }
-
-      // Ensure nullable is false when field is the subscriber key
-      if (deConfig.subscriberKey === updatedFields[index].name)
       {
         updatedFields[index].isNullable = false;
       }
@@ -344,72 +346,14 @@ export default function Upload()
   };
 
   const fieldTypes = ["Text", "Number", "Date", "Boolean", "EmailAddress", "Phone", "Decimal", "Locale"];
-
-  //helper function to try and determine a fields type
-  const guessFieldType = (columnData: string[], columnHeader: string): string =>
+  const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
+  const handleFolderSelect = (folder: any) =>
   {
-    // Regex patterns for different types
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^\+?1?\d{10,15}$|^\d{10,15}$/; // Matches phone numbers with or without country code
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$|^\d{2}\/\d{2}\/\d{4}$|^\d{2}\/\d{2}\/\d{2}$|^\d{2}\/\d{2}\/\d{4} \d{1,2}:\d{2}(AM|PM)$/i;
-    const localeRegex = /^[a-z]{2}-[a-z]{2}$/i; // Matches en-US, fr-FR, en-us, en-ca
-    const numberRegex = /^-?\d+(,\d{3})*(\.\d+)?$/;
-
-    // Trim values
-    const trimmedData = columnData.map(value => value.trim());
-
-    // Check for Boolean
-    const isBoolean = trimmedData.every(
-      (value) => ["true", "false", "1", "0", "yes", "no"].includes(value.toLowerCase())
-    );
-    if (isBoolean) return "Boolean";
-
-    // Check for Email
-    const isEmail = trimmedData.every((value) => emailRegex.test(value));
-    if (isEmail) return "EmailAddress";
-
-    // Check for Phone based on column header
-    if (columnHeader.toLowerCase().includes("phone"))
-    {
-      return "Phone";
-    }
-
-    // Check for Phone based on regex
-    const isPhone = trimmedData.every((value) => phoneRegex.test(value));
-    if (isPhone) return "Phone";
-
-    // Check for Date
-    const isDate = trimmedData.every((value) => dateRegex.test(value));
-    console.log("isDate", isDate);
-    if (isDate) return "Date";
-
-    // Check for Locale
-    const isLocale = trimmedData.every((value) => localeRegex.test(value));
-    if (isLocale) return "Locale";
-
-    // Check for Decimal
-    const isDecimal = trimmedData.every((value) => !isNaN(parseFloat(value.replace(/,/g, ''))) && value.includes("."));
-    if (isDecimal) return "Decimal";
-
-    // Check for Number
-    const isNumber = trimmedData.every((value) => numberRegex.test(value));
-    console.log("isNumber", isNumber);
-    if (isNumber) return "Number";
-
-    // Default to Text
-    return "Text";
+    setSelectedFolder(folder);
+    setDeConfig((prev) => ({ ...prev, folderId: folder.id }));
+    console.log("Selected Folder:", folder);
+    console.log(deConfig)
   };
-
-  if (loading)
-  {
-    return <div>Loading...</div>
-  }
-
-  if (error)
-  {
-    return <div>Error: {error}</div>
-  }
-
 
   return (
     <><div className="items-center gap-8 w-full p-8">
@@ -441,25 +385,17 @@ export default function Upload()
                     </>
                   ),
                 }}
-                variant={showAlert.type === "error" ? "error" : showAlert.type === 'warning' ? "warning" : "success"}
-                style={{ backgroundColor: showAlert.type === "error" ? "red" : showAlert.type === 'warning' ? "orange" : "green" }}
+                variant={showAlert.type === "danger" ? "error" : showAlert.type === 'warning' ? "warning" : "success"}
+                style={showAlert.type === 'success' ? { backgroundColor: 'green' } : {}}
                 onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
               />
-
-
             </AlertContainer>
           </IconSettings>
         </div>
       )}
       {/* Header */}
-
-
       <div className="flex w-full items-center justify-between">
-
-
-        <h1 className="text-3xl font-bold text-primary">Upload CSV</h1>
-
-
+        <h1 className="text-3xl font-bold text-primary">SnapDE</h1>
       </div>
 
       <p className="text-lg text-darkGray">
@@ -499,7 +435,8 @@ export default function Upload()
                         if (file && isCsv(file))
                         {
                           const blobUrl = URL.createObjectURL(file);
-                          setFile({
+
+                          uploadFile({
                             name: file.name,
                             url: blobUrl,
                             type: file.type,
@@ -534,11 +471,12 @@ export default function Upload()
                     if (files && files[0])
                     {
                       const blobUrl = URL.createObjectURL(files[0]);
-                      setFile({
+
+                      uploadFile({
                         name: files[0].name,
                         url: blobUrl,
                         type: files[0].type,
-                      });
+                      })
                     }
                   }} />
               </div>
@@ -575,29 +513,35 @@ export default function Upload()
                   onClick={handleResetFile}
                 />
               </div>
-              {file.name && !deConfig.name && (
 
-                <Button
-                  onClick={uploadFile}
-                  variant="brand"
-                  style={{ width: '5em', height: '3em', marginTop: 20 }}
-
-                  label={tableLoading ?
-                    <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
-                      <Spinner size="x-small" variant="inverse" hasContainer={false} />
-                    </div> : "Go"}
-                  disabled={tableLoading}
-                />
-
-              )}
             </div>
 
           </div>
         )}
 
+        {uploading && (
+          <div className="w-full mt-5">
+            <Spinner size="medium" variant="brand" hasContainer={false} />
+          </div>
+        )}
+
+        {/* Folder tree */}
+
+        {loadingFolders ? (
+          <div className="w-full mt-5">
+            <Spinner size="medium" variant="brand" hasContainer={false} />
+            <p>Loading folders. Please Wait.</p>
+          </div>
+        ) : (
+          <FolderTree
+            tree={dataFolders}
+            onSelect={handleFolderSelect}
+            selectedFolder={selectedFolder}
+          />
+        )}
 
         {/* Form Panel */}
-        {file.name && deConfig.name && (
+        {file.name && deConfig.name && !uploading && (
           <div className="w-full mt-5">
 
             <div className="flex flex-row gap-4">
@@ -608,10 +552,22 @@ export default function Upload()
                     label="Name"
                     defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
                     size="lg"
-                    onChange={(e: any) => setDeConfig((prev) => ({ ...prev, name: e.target.value }))}
+                    errorText={deNameError}
+                    onChange={(e: any) =>
+                    {
+                      const newName = e.target.value;
+                      const validationError = validateDeName(newName);
+                      if (validationError)
+                      {
+                        setdeNameError(validationError);
+                      } else
+                      {
+                        setdeNameError(null);
+                        setDeConfig((prev) => ({ ...prev, name: newName }));
+                      }
+                    }}
                     className="pb-5"
                   />
-
                   <div className="w-full flex-col flex gap-4 mb-5">
                     <div className="flex-rows flex gap-x-4">
                       <Checkbox
@@ -680,9 +636,21 @@ export default function Upload()
                         <TableCell>
                           <Input
                             defaultValue={field.name}
-
                             size="sm"
-                            onChange={(e: any) => updateField(index, { name: e.target.value })}
+                            errorText={fieldErrors[index]}
+                            onChange={(e: any) =>
+                            {
+                              const newFieldName = e.target.value;
+                              const validationError = validateFieldName(newFieldName);
+                              setFieldErrors((prevErrors) => ({
+                                ...prevErrors,
+                                [index]: validationError,
+                              }));
+                              if (!validationError)
+                              {
+                                updateField(index, { name: newFieldName });
+                              }
+                            }}
                           />
                         </TableCell>
                         <TableCell aria-hidden="false">
@@ -756,7 +724,6 @@ export default function Upload()
                                 isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
                               })
                             }
-
                           />
                         </TableCell>
                         <TableCell>
@@ -804,7 +771,7 @@ export default function Upload()
                 <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
                   <Spinner size="x-small" variant="inverse" hasContainer={false} />
                 </div> : "Create"}
-              disabled={saving}
+              disabled={saving || deNameError || Object.values(fieldErrors).some(error => error !== null)}
             />
           </div>
         )}

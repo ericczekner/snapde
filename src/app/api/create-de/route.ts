@@ -26,14 +26,14 @@ async function getToken() {
 export async function POST(req: NextRequest) {
 	const { deConfig, file } = await req.json();
 	const { name } = deConfig;
-
+	console.log("deConfig", deConfig);
 	const payload = {
 		name: name,
 		key: "",
 		isActive: true,
 		isSendable: deConfig.isSendable || false,
 		isTestable: deConfig.isTestable || false,
-		categoryId: 557752,
+		categoryId: Number(deConfig.folderId),
 		sendableCustomObjectField: deConfig.isSendable
 			? deConfig.subscriberKey
 			: "",
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
 			}
 		);
 		const createRes = await createReq.json();
-		console.log(createRes);
+
 		if (createRes.errorcode === 30004) {
 			return NextResponse.json({
 				ok: false,
@@ -109,47 +109,124 @@ export async function POST(req: NextRequest) {
 			dataUploaded: false,
 			message: "",
 		};
-		const uploadURL = `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`;
+
+		const hasPrimaryKeys = deConfig.fields.some(
+			(field: any) => field.isPrimaryKey === true
+		);
+
+		const uploadURL = hasPrimaryKeys
+			? `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`
+			: `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/data/v1/async/dataextensions/key:${deKey}/rows`;
 		const uploadBody: any[] = [];
+		let uploadPayload;
 
-		file.forEach((row: any) => {
-			const keys: { [key: string]: any } = {};
-			const values: { [key: string]: any } = {};
+		if (hasPrimaryKeys) {
+			file.forEach((row: any) => {
+				const keys: { [key: string]: any } = {};
+				const values: { [key: string]: any } = {};
 
-			Object.entries(row).forEach(([key, value]) => {
-				if (
-					primaryKeyFields.some(
+				Object.entries(row).forEach(([key, value]) => {
+					let cleanedValue =
+						typeof value === "string"
+							? value.replaceAll(",", "")
+							: value;
+
+					const fieldConfig = deConfig.fields.find(
 						(field: any) =>
 							field.name.toLowerCase() === key.toLowerCase()
-					)
-				) {
-					keys[key] = value;
-				} else {
-					values[key] = value;
-				}
+					);
+
+					if (
+						fieldConfig &&
+						fieldConfig.type === "Number"
+					) {
+						cleanedValue = Number(cleanedValue);
+					}
+
+					// Use default value if the value is empty or undefined
+					if (
+						(cleanedValue === "" ||
+							cleanedValue === undefined) &&
+						fieldConfig &&
+						fieldConfig.defaultValue
+					) {
+						cleanedValue = fieldConfig.defaultValue;
+					}
+
+					if (
+						primaryKeyFields.some(
+							(field: any) =>
+								field.name.toLowerCase() ===
+								key.toLowerCase()
+						)
+					) {
+						keys[key] = cleanedValue;
+					} else {
+						values[key] = cleanedValue;
+					}
+				});
+
+				uploadBody.push({ keys, values });
 			});
+			uploadPayload = uploadBody;
+		} else {
+			const items = file.map((row: any) => {
+				const values: { [key: string]: any } = {};
+				Object.entries(row).forEach(([key, value]) => {
+					let cleanedValue =
+						typeof value === "string"
+							? value.replaceAll(",", "")
+							: value;
 
-			uploadBody.push({ keys, values });
-		});
+					const fieldConfig = deConfig.fields.find(
+						(field: any) =>
+							field.name.toLowerCase() === key.toLowerCase()
+					);
 
+					if (
+						fieldConfig &&
+						fieldConfig.type === "Number"
+					) {
+						cleanedValue = Number(cleanedValue);
+					}
+
+					// Use default value if the value is empty or undefined
+					if (
+						(cleanedValue === "" ||
+							cleanedValue === undefined) &&
+						fieldConfig &&
+						fieldConfig.defaultValue
+					) {
+						cleanedValue = fieldConfig.defaultValue;
+					}
+
+					values[key] = cleanedValue;
+				});
+				return values;
+			});
+			uploadPayload = { items };
+		}
 		const uploadReq = await fetch(uploadURL, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
-			body: JSON.stringify(uploadBody),
+			body: JSON.stringify(uploadPayload),
 		});
 
 		const uploadRes = await uploadReq.json();
 		if (uploadRes.errorcode || uploadRes.errorcode === 0) {
 			response.dataUploaded = false;
-			response.message = uploadRes.message;
+			if (uploadRes.errorcode === 10006) {
+				response.message =
+					"Unable to save rows for data extension. Check the data types of the fields and try again.";
+			} else {
+				response.message = uploadRes.message;
+			}
 		} else {
 			response.dataUploaded = true;
 		}
-
-		console.log(uploadRes);
 
 		return NextResponse.json(response);
 	} catch (err: any) {

@@ -27,3 +27,25 @@ body {
 	background: var(--background);
 	font-family: "Salesforce-Sans", sans-serif;
 }
+
+ul {
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+
+li {
+	padding: 5px 0;
+	display: flex;
+	align-items: center;
+	cursor: pointer;
+	border-radius: 4px;
+}
+
+li:hover {
+	background-color: #f4f6f9;
+}
+
+li.selected {
+	background-color: #e5f3ff;
+}

@@ -49,25 +49,24 @@ const FolderTree: React.FC<FolderTreeProps> = ({
                             }}
                         >
                             <div
-                                onClick={(e) =>
-                                {
-                                    e.stopPropagation(); // Prevent parent clicks when toggling
-                                    folder.children.length > 0 && toggleFolder(folder.id);
-                                    onSelect(folder); // Handle folder selection
-                                }}
                                 style={{
-                                    cursor: "pointer",
                                     display: "flex",
                                     alignItems: "center",
-                                    backgroundColor: isSelected ? "#e5f3ff" : "transparent", // Highlight selected folder
                                     padding: "5px",
                                     borderRadius: "4px",
+                                    backgroundColor: isSelected ? "#e5f3ff" : "transparent", // Highlight selected folder
                                 }}
                             >
                                 {/* Toggle Icon */}
                                 {folder.children.length > 0 ? (
                                     <span
+                                        onClick={(e) =>
+                                        {
+                                            e.stopPropagation(); // Prevent parent clicks when toggling
+                                            toggleFolder(folder.id);
+                                        }}
                                         style={{
+                                            cursor: "pointer",
                                             marginRight: 8,
                                             fontWeight: "bold",
                                             fontSize: "14px",
@@ -97,9 +96,16 @@ const FolderTree: React.FC<FolderTreeProps> = ({
 
                                 {/* Folder Name */}
                                 <span
+                                    onClick={(e) =>
+                                    {
+                                        e.stopPropagation(); // Prevent parent clicks when selecting
+                                        onSelect(folder); // Handle folder selection
+                                    }}
                                     style={{
+                                        cursor: "pointer",
                                         fontWeight: isSelected ? "bold" : "normal", // Highlight selected folder name
                                     }}
+                                    className="span-hover"
                                 >
                                     {folder.name}
                                 </span>

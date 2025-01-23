@@ -79,6 +79,8 @@ export default function Upload()
       const response = await fetch('https://snapde.vercel.app/api/get-folders');
       const data = await response.json();
       console.log(data)
+      setSelectedFolder(data[0]);
+      setDeConfig((prev) => ({ ...prev, folderId: data[0].id }));
       setDataFolders(data);
       setLoadingFolders(false);
     }
@@ -176,12 +178,14 @@ export default function Upload()
           }
 
           // Update state
-          setDeConfig({
+          setDeConfig((prev) => ({
+            ...prev,
             name: file.name.substring(0, file.name.indexOf(".csv")),
             fields: fieldArr,
             isSendable: false,
             isTestable: false,
-          });
+            folderId: selectedFolder?.id || prev.folderId,
+          }));
 
           setTableData(hasData ? result.data as any : []);
 
@@ -214,12 +218,14 @@ export default function Upload()
     setFile({ name: "", url: "", type: "" });
     setTableData([]);
 
-    setDeConfig({
+    setDeConfig((prev) => ({
+      ...prev,
       name: "",
       fields: [],
       isSendable: false,
       isTestable: false,
-    });
+      folderId: selectedFolder?.id || "",
+    }));
   };
 
   const createDataExtension = async () =>
@@ -347,12 +353,13 @@ export default function Upload()
 
   const fieldTypes = ["Text", "Number", "Date", "Boolean", "EmailAddress", "Phone", "Decimal", "Locale"];
   const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
+
   const handleFolderSelect = (folder: any) =>
   {
     setSelectedFolder(folder);
     setDeConfig((prev) => ({ ...prev, folderId: folder.id }));
     console.log("Selected Folder:", folder);
-    console.log(deConfig)
+    console.log(deConfig);
   };
 
   return (
@@ -392,6 +399,15 @@ export default function Upload()
             </AlertContainer>
           </IconSettings>
         </div>
+      )}
+
+      {/* Loading Icon */}
+      {loadingFolders && (
+        <Spinner size="large" variant="brand" hasContainer={true} />
+      )}
+      {/* Saving icon */}
+      {saving && (
+        <Spinner size="medium" variant="brand" hasContainer={true} />
       )}
       {/* Header */}
       <div className="flex w-full items-center justify-between">
@@ -521,54 +537,38 @@ export default function Upload()
 
         {uploading && (
           <div className="w-full mt-5">
-            <Spinner size="medium" variant="brand" hasContainer={false} />
+            <Spinner size="medium" variant="brand" hasContainer={true} />
           </div>
         )}
 
-        {/* Folder tree */}
-
-        {loadingFolders ? (
-          <div className="w-full mt-5">
-            <Spinner size="medium" variant="brand" hasContainer={false} />
-            <p>Loading folders. Please Wait.</p>
-          </div>
-        ) : (
-          <FolderTree
-            tree={dataFolders}
-            onSelect={handleFolderSelect}
-            selectedFolder={selectedFolder}
-          />
-        )}
-
-        {/* Form Panel */}
         {file.name && deConfig.name && !uploading && (
-          <div className="w-full mt-5">
-
-            <div className="flex flex-row gap-4">
-
-              <Card id="DEName-Card" heading="Data Extension Configuration" className="w-full mb-10">
-                <div className="px-4">
-                  <Input
-                    label="Name"
-                    defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
-                    size="lg"
-                    errorText={deNameError}
-                    onChange={(e: any) =>
-                    {
-                      const newName = e.target.value;
-                      const validationError = validateDeName(newName);
-                      if (validationError)
+          <div className="mt-2">
+            <Card id="DEConfig-Card" heading="Data Extension Configuration" className="mb-10">
+              <div className="w-full flex">
+                <div className="w-1/2">
+                  <div className="px-4">
+                    <Input
+                      label="Data Extension Name"
+                      defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
+                      size="lg"
+                      errorText={deNameError}
+                      onChange={(e: any) =>
                       {
-                        setdeNameError(validationError);
-                      } else
-                      {
-                        setdeNameError(null);
-                        setDeConfig((prev) => ({ ...prev, name: newName }));
-                      }
-                    }}
-                    className="pb-5"
-                  />
-                  <div className="w-full flex-col flex gap-4 mb-5">
+                        const newName = e.target.value;
+                        const validationError = validateDeName(newName);
+                        if (validationError)
+                        {
+                          setdeNameError(validationError);
+                        } else
+                        {
+                          setdeNameError(null);
+                          setDeConfig((prev) => ({ ...prev, name: newName }));
+                        }
+                      }}
+                      className="pb-5"
+                    />
+
+
                     <div className="flex-rows flex gap-x-4">
                       <Checkbox
                         isSelected={deConfig.isSendable}
@@ -593,7 +593,6 @@ export default function Upload()
                       <div>
                         <Select
                           isRequired={true}
-
                           placeholder="Select SubscriberKey Field"
                           selectedKeys={new Set([deConfig.subscriberKey || ""])}
                           onChange={(selectedKey) => handleSubscriberKeyChange(selectedKey.target.value)}
@@ -609,18 +608,37 @@ export default function Upload()
                         </Select>
                       </div>
                     )}
-
-
+                    <div className="py-4">
+                      <p>Save Location: {selectedFolder?.name}</p>
+                    </div>
                   </div>
                 </div>
-              </Card>
 
+                {/* Folder tree */}
+                <div className="w-1/2 px-4">
+                  {loadingFolders ? (
+                    <div className="flex justify-center items-center">
+                      <p className="text-darkGray">Loading Folders. Please wait.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <h2 className="text-md text-darkGray">Select Folder</h2>
+                      <div className="max-h-[300px] overflow-y-auto">
+                        <FolderTree
+                          tree={dataFolders}
+                          onSelect={handleFolderSelect}
+                          selectedFolder={selectedFolder}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </Card>
 
-            </div>
+            {/* Field Configuration */}
             <div className="flex flex-row gap-4">
-              <Card id="DEName-Card" heading="Field Configuration" className="w-full mb-10">
-
-
+              <Card id="DEFieldConfig-Card" heading="Field Configuration" className="w-full mb-10">
                 <Table isHeaderSticky={true} aria-label="Fields" shadow="none">
                   <TableHeader>
                     <TableColumn className="bg-transparent">Field</TableColumn>
@@ -782,90 +800,3 @@ export default function Upload()
 
   );
 }
-
-
-
-// //The main home page
-
-// "use client"
-// import { Card, CardHeader, CardBody, CardFooter, Divider, Link, Button } from "@nextui-org/react"
-// import { ArrowUpTrayIcon, ClockIcon } from "@heroicons/react/24/outline";
-// export default function Home()
-// {
-//   return (
-//     <div className="justify-center flex flex-wrap gap-4">
-//       <Card className="max-w-[400px]">
-//         <CardHeader className="flex gap-3">
-//           <ArrowUpTrayIcon className="h-12 w-12 text-secondary" />
-//           <div className="flex flex-col">
-//             <p className="text-md">Upload CSV</p>
-//             <p className="text-small text-default-500">Create a DE by uploading a CSV</p>
-//           </div>
-//         </CardHeader>
-//         <Divider />
-//         <CardBody>
-//           <p>Select a csv and let SnapDex create the data extension for you!</p>
-//         </CardBody>
-//         <Divider />
-//         <CardFooter>
-//           <Button color="primary" size="md">
-//             <Link href="/upload" className="text-white">Upload</Link>
-//           </Button>
-//         </CardFooter>
-//       </Card>
-//       <Card className="max-w-[400px]">
-//         <CardHeader className="flex gap-3">
-//           <ClockIcon className="h-12 w-12 text-secondary" />
-//           <div className="flex flex-col">
-//             <p className="text-md">DE History</p>
-//             <p className="text-small text-default-500">See the history of a DE</p>
-//           </div>
-//         </CardHeader>
-//         <Divider />
-//         <CardBody>
-//           <p>Select a data extension, view its history, and revert changes quickly!</p>
-//         </CardBody>
-//         <Divider />
-//         <CardFooter>
-//           <Button color="primary" size="md">
-//             <Link href="/history" className="text-white">History</Link>
-//           </Button>
-//         </CardFooter>
-//       </Card>
-//     </div>
-
-//   );
-// }
-
-
-{/* {file.name && tableData.length > 0 && (
-              <Table
-                isStriped
-                isHeaderSticky={true}
-                aria-label={file.name}
-                classNames={{
-                  base: "max-h-[520px] overflow-scroll max-w-7xl",
-                  table: "min-h-[420px]",
-                }}
-              >
-                <TableHeader>
-                  {Object.keys(tableData[0]).map((key) => (
-                    <TableColumn key={key}>{key}</TableColumn>
-                  ))}
-                </TableHeader>
-                <TableBody emptyContent={"This file contains no rows."}>
-                  {tableData.slice(0, 100).map((row, index) => (
-                    <TableRow key={index}>
-                      {Object.values(row).map((cell: any, cellIndex) => (
-                        <TableCell key={cellIndex}>{cell}</TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-            {tableData.length >= 100 && (
-              <div>
-                <p>Only the first 100 rows of data are displayed</p>
-              </div>
-            )} */}

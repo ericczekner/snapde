@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 		isActive: true,
 		isSendable: deConfig.isSendable || false,
 		isTestable: deConfig.isTestable || false,
-		categoryId: Number(deConfig.folderId),
+		categoryId: deConfig.folderId,
 		sendableCustomObjectField: deConfig.isSendable
 			? deConfig.subscriberKey
 			: "",
@@ -215,7 +215,17 @@ export async function POST(req: NextRequest) {
 			body: JSON.stringify(uploadPayload),
 		});
 
+		if (!uploadReq.ok) {
+			console.log("Error uploading data!");
+			response.dataUploaded = false;
+			response.message =
+				"An error occurred when uploading data to the data extension";
+
+			return NextResponse.json(response);
+		}
+
 		const uploadRes = await uploadReq.json();
+
 		if (uploadRes.errorcode || uploadRes.errorcode === 0) {
 			response.dataUploaded = false;
 			if (uploadRes.errorcode === 10006) {

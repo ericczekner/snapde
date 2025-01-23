@@ -42,10 +42,6 @@ li {
 	border-radius: 4px;
 }
 
-li:hover {
-	background-color: #f4f6f9;
-}
-
 li.selected {
 	background-color: #e5f3ff;
 }

@@ -78,7 +78,7 @@ export default function Upload()
 
     async function fetchFolders()
     {
-      const response = await fetch('/api/get-folders');
+      const response = await fetch('https://snapde.vercel.app/api/get-folders');
       const data = await response.json();
 
       setSelectedFolder(data[0]);
@@ -248,7 +248,7 @@ export default function Upload()
 
     console.log("Saving DE: ", deConfig)
 
-    const res = await fetch('/api/create-de', {
+    const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'

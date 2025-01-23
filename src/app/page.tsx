@@ -246,7 +246,7 @@ export default function Upload()
       return;
     }
 
-    console.log("Saving DE: ", deConfig)
+
 
     const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",

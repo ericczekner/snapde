@@ -25,13 +25,16 @@ interface SoapResponse {
 }
 
 async function getToken() {
-	const authURL =
-		"https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.auth.marketingcloudapis.com/v2/token";
+	const tenant = process.env.SFMC_TENANT;
+	const client_id = process.env.SFMC_CLIENT_ID;
+	const client_secret = process.env.SFMC_CLIENT_SECRET;
+	const account_id = process.env.SFMC_ACCOUNT_ID;
+	const authURL = `https://${tenant}.auth.marketingcloudapis.com/v2/token`;
 	const payload = {
 		grant_type: "client_credentials",
-		client_id: "3gmzeu2sklbmycgptuq902rm",
-		client_secret: "NGAv65JeDOdRtPJzXRpk1bxy",
-		account_id: "7224602",
+		client_id: client_id,
+		client_secret: client_secret,
+		account_id: account_id,
 	};
 
 	const req = await fetch(authURL, {
@@ -55,8 +58,8 @@ async function getToken() {
 export async function GET(
 	req: NextRequest
 ): Promise<NextResponse> {
-	const soapEndpoint =
-		"https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.soap.marketingcloudapis.com/Service.asmx";
+	const tenant = process.env.SFMC_TENANT;
+	const soapEndpoint = `https://${tenant}.soap.marketingcloudapis.com/Service.asmx`;
 	const accessToken = await getToken();
 
 	const soapRequest = `

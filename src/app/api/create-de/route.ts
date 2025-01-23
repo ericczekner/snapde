@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
 async function getToken() {
-	const authURL =
-		"https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.auth.marketingcloudapis.com/v2/token";
+	const tenant = process.env.SFMC_TENANT;
+	const client_id = process.env.SFMC_CLIENT_ID;
+	const client_secret = process.env.SFMC_CLIENT_SECRET;
+	const account_id = process.env.SFMC_ACCOUNT_ID;
+	const authURL = `https://${tenant}.auth.marketingcloudapis.com/v2/token`;
 	const payload = {
 		grant_type: "client_credentials",
-		client_id: "3gmzeu2sklbmycgptuq902rm",
-		client_secret: "NGAv65JeDOdRtPJzXRpk1bxy",
-		account_id: "7224602",
+		client_id: client_id,
+		client_secret: client_secret,
+		account_id: account_id,
 	};
 
 	const req = await fetch(authURL, {
@@ -79,8 +82,10 @@ export async function POST(req: NextRequest) {
 
 	const token = await getToken();
 	try {
+		const tenant = process.env.SFMC_TENANT;
+
 		const createReq = await fetch(
-			`https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/data/v1/customobjects/`,
+			`https://${tenant}.rest.marketingcloudapis.com/data/v1/customobjects/`,
 			{
 				method: "POST",
 				headers: {
@@ -115,8 +120,8 @@ export async function POST(req: NextRequest) {
 		);
 
 		const uploadURL = hasPrimaryKeys
-			? `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`
-			: `https://mcbf8s0h5zzztdqn8-zf3kc5pvb4.rest.marketingcloudapis.com/data/v1/async/dataextensions/key:${deKey}/rows`;
+			? `https://${tenant}.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`
+			: `https://${tenant}.rest.marketingcloudapis.com/data/v1/async/dataextensions/key:${deKey}/rows`;
 		const uploadBody: any[] = [];
 		let uploadPayload;
 

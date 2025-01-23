@@ -40,6 +40,8 @@ import FolderTree from "@/components/FolderTree";
 export default function Upload()
 {
 
+
+
   const [dataFolders, setDataFolders] = useState([]);
   const [loadingFolders, setLoadingFolders] = useState(true);
   const [file, setFile] = useState({ name: "", url: "", type: "" });
@@ -76,9 +78,9 @@ export default function Upload()
 
     async function fetchFolders()
     {
-      const response = await fetch('https://snapde.vercel.app/api/get-folders');
+      const response = await fetch('/api/get-folders');
       const data = await response.json();
-      console.log(data)
+
       setSelectedFolder(data[0]);
       setDeConfig((prev) => ({ ...prev, folderId: data[0].id }));
       setDataFolders(data);
@@ -246,7 +248,7 @@ export default function Upload()
 
     console.log("Saving DE: ", deConfig)
 
-    const res = await fetch('https://snapde.vercel.app/api/create-de', {
+    const res = await fetch('/api/create-de', {
       method: "POST",
       headers: {
         'Content-Type': 'application/json'

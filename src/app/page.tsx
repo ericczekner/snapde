@@ -55,12 +55,14 @@ export default function Upload()
     isTestable: boolean;
     subscriberKey?: string;
     folderId?: string;
+    dataLength: number;
   }>({
     name: "",
     fields: [],
     isSendable: false,
     isTestable: false,
     folderId: "",
+    dataLength: 0,
   });
   const [showAlert, setShowAlert] = useState({
     shown: false,
@@ -108,7 +110,7 @@ export default function Upload()
         {
           // Check if there is any data in the CSV
           const headers = result.meta.fields || []; // Extract headers
-          const hasData = result.data && result.data.length > 0;
+          const hasData = result.data && result.data.length > 0 && result.data.length < 35000;
 
           if (!headers.length)
           {
@@ -187,6 +189,7 @@ export default function Upload()
             isSendable: false,
             isTestable: false,
             folderId: selectedFolder?.id || prev.folderId,
+            dataLength: result.data.length,
           }));
 
           setTableData(hasData ? result.data as any : []);
@@ -199,6 +202,15 @@ export default function Upload()
               title: "No data found",
               description: "The uploaded CSV has no data, only column headers. Only a DE will be created.",
               type: "info",
+            });
+          }
+          if (result.data.length > 35000)
+          {
+            setShowAlert({
+              shown: true,
+              title: "The uploaded CSV has more than 35000 rows. Only a DE will be created.",
+              description: `You will need to upload the data manually until a future update adds this functionality.`,
+              type: "warning",
             });
           }
         },
@@ -219,14 +231,17 @@ export default function Upload()
   {
     setFile({ name: "", url: "", type: "" });
     setTableData([]);
+    setdeNameError(null);
+    setFieldErrors({});
 
     setDeConfig((prev) => ({
-      ...prev,
       name: "",
       fields: [],
       isSendable: false,
       isTestable: false,
-      folderId: selectedFolder?.id || "",
+      subscriberKey: undefined,
+      folderId: prev.folderId,
+      dataLength: 0
     }));
   };
 
@@ -246,7 +261,7 @@ export default function Upload()
       return;
     }
 
-
+    console.log(deConfig)
 
     const res = await fetch('https://snapde.vercel.app/api/create-de', {
       method: "POST",
@@ -261,7 +276,7 @@ export default function Upload()
     if (data.ok)
     {
       console.log("Data: ", data);
-      if (data.deCreated === true && data.dataUploaded === true)
+      if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength < 35000)
       {
 
         setShowAlert({
@@ -270,7 +285,7 @@ export default function Upload()
           description: "Data Extension has been created and loaded successfully",
           type: "success",
         });
-      } else if (data.deCreated === true && data.dataUploaded === false)
+      } else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength < 35000)
       {
 
         setShowAlert({
@@ -278,6 +293,24 @@ export default function Upload()
           title: "Data extension created, but there was an error uploading data",
           description: data.message,
           type: "warning",
+        });
+      }
+      else if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength >= 35000)
+      {
+        setShowAlert({
+          shown: true,
+          title: "Data Extension Created",
+          description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
+          type: "success",
+        });
+      }
+      else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength >= 35000)
+      {
+        setShowAlert({
+          shown: true,
+          title: "Data Extension Created",
+          description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
+          type: "success",
         });
       }
       handleResetFile();
@@ -365,19 +398,25 @@ export default function Upload()
   };
 
   return (
-    <><div className="items-center gap-8 w-full p-8">
-      {showAlert.shown && (
-        <div className="mb-5">
-          <IconSettings iconPath="/icons">
-            <AlertContainer>
-              <Alert
-                dismissable={true}
-                icon={showAlert.type === "danger" || showAlert.type === "warning" ? <Icon category="utility" name="error" /> : <Icon category="utility" name="info" />}
-                labels={{
-                  heading: (
-                    <>
-                      {showAlert.title} - {showAlert.description}
-                      {/* <button
+    <>
+      {/* Saving icon */}
+      {saving && (
+        <Spinner size="medium" variant="brand" hasContainer={true} />
+      )}
+      <div className="items-center gap-8 w-full p-8">
+        {showAlert.shown && (
+          <div className="mb-5">
+            <IconSettings iconPath="/icons">
+              <AlertContainer>
+                <Alert
+                  dismissable={true}
+                  icon={showAlert.type === "danger" || showAlert.type === "warning" ? <Icon category="utility" name="error" style={{ color: 'white' }} className="white-icon" /> : <Icon category="utility" name="info" style={{ color: 'white' }} className="white-icon" />}
+
+                  labels={{
+                    heading: (
+                      <>
+                        {showAlert.title} - {showAlert.description}
+                        {/* <button
                         style={{
                           marginLeft: '20px',
 
@@ -391,414 +430,412 @@ export default function Upload()
                       >
                         <XMarkIcon className="w-5 h-5 text-white-500" />
                       </button> */}
-                    </>
-                  ),
-                }}
-                variant={showAlert.type === "danger" ? "error" : showAlert.type === 'warning' ? "warning" : "success"}
-                style={showAlert.type === 'success' ? { backgroundColor: 'green' } : {}}
-                onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
-              />
-            </AlertContainer>
-          </IconSettings>
-        </div>
-      )}
-
-      {/* Loading Icon */}
-      {loadingFolders && (
-        <Spinner size="large" variant="brand" hasContainer={true} />
-      )}
-      {/* Saving icon */}
-      {saving && (
-        <Spinner size="medium" variant="brand" hasContainer={true} />
-      )}
-      {/* Header */}
-      <div className="flex w-full items-center justify-between">
-        <h1 className="text-3xl font-bold text-primary">SnapDE</h1>
-      </div>
-
-      <p className="text-lg text-darkGray">
-        Add a CSV file to create a new data extension.
-      </p>
-
-      <div className="w-full gap-4">
-        {/* Table Panel */}
-
-        {!file.name ? (
-          <div
-            className={`grid grid-cols-1 items-center bg-gray-50 rounded-lg p-6 shadow  cursor-pointer ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
-          >
-            <div className="w-full">
-              <div
-                onDragOver={(e) =>
-                {
-                  e.preventDefault();
-                  setFileEntered(true);
-                }}
-                onDragLeave={(e) =>
-                {
-                  e.preventDefault();
-                  setFileEntered(false);
-                }}
-                onDrop={(e) =>
-                {
-                  e.preventDefault();
-                  setFileEntered(false);
-                  if (e.dataTransfer.items)
-                  {
-                    [...e.dataTransfer.items].forEach((item) =>
-                    {
-                      if (item.kind === "file")
-                      {
-                        const file = item.getAsFile();
-                        if (file && isCsv(file))
-                        {
-                          const blobUrl = URL.createObjectURL(file);
-
-                          uploadFile({
-                            name: file.name,
-                            url: blobUrl,
-                            type: file.type,
-                          });
-                        }
-                        else
-                        {
-                          alert(
-                            "Invalid file type. Please upload a CSV file."
-                          );
-                        }
-                      }
-                    });
-                  }
-                }}
-                className={`${fileEntered ? "border-4" : "border-2"} mx-auto bg-white flex flex-col w-full max-w-xs h-72 border-dashed items-center justify-center`}
-              >
-                <label
-                  htmlFor="file"
-                  className="h-full flex flex-col justify-center text-center"
-                >
-                  Click to upload or drag and drop
-                </label>
-                <input
-                  id="file"
-                  type="file"
-                  className="hidden"
-                  accept=".csv"
-                  onChange={(e) =>
-                  {
-                    const files = e.target.files;
-                    if (files && files[0])
-                    {
-                      const blobUrl = URL.createObjectURL(files[0]);
-
-                      uploadFile({
-                        name: files[0].name,
-                        url: blobUrl,
-                        type: files[0].type,
-                      })
-                    }
-                  }} />
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div
-            className={`grid grid-cols-2 items-center p-3 ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
-          >
-            <div className="w-full">
-              <div className="relative gap-4 items-center justify-between">
-
-                <Files id={file.name} className="flex-1 flex-row gap-4 items-center justify-between">
-                  <div className="relative">
-                    {/* File Component */}
-                    <File
-                      id={file.name}
-                      labels={{
-                        title: `${file.name}`,
-                      }}
-                      assistiveText={{
-                        image: "Placeholder image",
-                      }}
-                      className="flex-1 h-[10em] w-[10em]"
-                      image={`${file.type === "text/csv" ? "/icons/doctype/csv.svg" : "/file.svg"}`}
-                    />
-
-
-                  </div>
-                </Files>
-                {/* X Icon */}
-                <XMarkIcon
-                  className="absolute top-0 left-20 ml-[45px] w-6 h-6 text-red-500 cursor-pointer"
-                  onClick={handleResetFile}
+                      </>
+                    ),
+                  }}
+                  variant={showAlert.type === "danger" ? "error" : showAlert.type === 'warning' ? "warning" : "success"}
+                  style={showAlert.type === 'success' ? { backgroundColor: 'green', color: 'white' } : { color: 'white' }}
+                  onRequestClose={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
                 />
-              </div>
-
-            </div>
-
+              </AlertContainer>
+            </IconSettings>
           </div>
         )}
 
-        {uploading && (
-          <div className="w-full mt-5">
-            <Spinner size="medium" variant="brand" hasContainer={true} />
-          </div>
+        {/* Loading Icon */}
+        {loadingFolders && (
+          <Spinner size="large" variant="brand" hasContainer={true} />
         )}
 
-        {file.name && deConfig.name && !uploading && (
-          <div className="mt-2">
-            <Card id="DEConfig-Card" heading="Data Extension Configuration" className="mb-10">
-              <div className="w-full flex">
-                <div className="w-1/2">
-                  <div className="px-4">
-                    <Input
-                      label="Data Extension Name"
-                      defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
-                      size="lg"
-                      errorText={deNameError}
-                      onChange={(e: any) =>
+        {/* Header */}
+        <div className="flex w-full items-center justify-between">
+          <h1 className="text-3xl font-bold text-primary">SnapDE</h1>
+        </div>
+
+        <p className="text-lg text-darkGray">
+          Add a CSV file to create a new data extension.
+        </p>
+
+        <div className="w-full gap-4">
+          {/* Table Panel */}
+
+          {!file.name ? (
+            <div
+              className={`grid grid-cols-1 items-center bg-gray-50 rounded-lg p-6 shadow cursor-pointer ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
+            >
+              <div className="w-full">
+                <div
+
+                  onDragOver={(e) =>
+                  {
+                    e.preventDefault();
+                    setFileEntered(true);
+                  }}
+                  onDragLeave={(e) =>
+                  {
+                    e.preventDefault();
+                    setFileEntered(false);
+                  }}
+                  onDrop={(e) =>
+                  {
+                    e.preventDefault();
+                    setFileEntered(false);
+                    if (e.dataTransfer.items)
+                    {
+                      [...e.dataTransfer.items].forEach((item) =>
                       {
-                        const newName = e.target.value;
-                        const validationError = validateDeName(newName);
-                        if (validationError)
+                        if (item.kind === "file")
                         {
-                          setdeNameError(validationError);
-                        } else
-                        {
-                          setdeNameError(null);
-                          setDeConfig((prev) => ({ ...prev, name: newName }));
+                          const file = item.getAsFile();
+                          if (file && isCsv(file))
+                          {
+                            const blobUrl = URL.createObjectURL(file);
+
+                            uploadFile({
+                              name: file.name,
+                              url: blobUrl,
+                              type: file.type,
+                            });
+                          }
+                          else
+                          {
+                            alert(
+                              "Invalid file type. Please upload a CSV file."
+                            );
+                          }
                         }
-                      }}
-                      className="pb-5"
-                    />
+                      });
+                    }
+                  }}
+                  className={`${fileEntered ? "border-4" : "border-2"} mx-auto bg-white flex flex-col w-full  h-72 border-dashed items-center justify-center`}
+                >
+                  <label
+                    htmlFor="file"
+                    className="h-full flex flex-col justify-center text-center"
+                  >
+                    Click to upload or drag and drop
+                  </label>
+                  <input
+                    id="file"
+                    type="file"
+                    className="hidden"
+                    accept=".csv"
+                    onChange={(e) =>
+                    {
+                      const files = e.target.files;
+                      if (files && files[0])
+                      {
+                        const blobUrl = URL.createObjectURL(files[0]);
 
+                        uploadFile({
+                          name: files[0].name,
+                          url: blobUrl,
+                          type: files[0].type,
+                        })
+                      }
+                    }} />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`grid grid-cols-2 items-center p-3 ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
+            >
+              <div className="w-full">
+                <div className="relative gap-4 items-center justify-between">
 
-                    <div className="flex-rows flex gap-x-4">
-                      <Checkbox
-                        isSelected={deConfig.isSendable}
-                        labels={{ label: "Is Sendable" }}
-                        onChange={(e: any) => setDeConfig((prev) => ({
-                          ...prev,
-                          isSendable: e.target.checked,
-                          subscriberKey: e.target.checked ? prev.subscriberKey : undefined, // Clear subscriberKey if not sendable
-                        }))}
-
+                  <Files id={file.name} className="flex-1 flex-row gap-4 items-center justify-between">
+                    <div className="relative">
+                      {/* File Component */}
+                      <File
+                        id={file.name}
+                        labels={{
+                          title: `${file.name}`,
+                        }}
+                        assistiveText={{
+                          image: "Placeholder image",
+                        }}
+                        className="flex-1 h-[10em] w-[10em]"
+                        image={`${file.type === "text/csv" ? "/icons/doctype/csv.svg" : "/file.svg"}`}
                       />
 
-                      <Checkbox
-                        isSelected={deConfig.isTestable}
-                        labels={{ label: "Is Testable" }}
-                        onChange={(e: any) => setDeConfig((prev) => ({ ...prev, isTestable: e.target.checked }))}
-                      >
-                        Is Testable
-                      </Checkbox>
-                    </div>
-                    {deConfig.isSendable && (
-                      <div>
-                        <Select
-                          isRequired={true}
-                          placeholder="Select SubscriberKey Field"
-                          selectedKeys={new Set([deConfig.subscriberKey || ""])}
-                          onChange={(selectedKey) => handleSubscriberKeyChange(selectedKey.target.value)}
-                          variant="bordered"
-                          radius="sm"
 
-                        >
-                          {deConfig.fields.map((field) => (
-                            <SelectItem key={field.name} value={field.name}>
-                              {field.name}
-                            </SelectItem>
-                          ))}
-                        </Select>
-                      </div>
-                    )}
-                    <div className="py-4">
-                      <p>Save Location: {selectedFolder?.name}</p>
                     </div>
-                  </div>
+                  </Files>
+                  {/* X Icon */}
+                  <XMarkIcon
+                    className="absolute top-0 left-20 ml-[45px] w-6 h-6 text-red-500 cursor-pointer"
+                    onClick={() => { handleResetFile(), setShowAlert({ shown: false, title: "", description: "", type: "success" }) }}
+                  />
                 </div>
 
-                {/* Folder tree */}
-                <div className="w-1/2 px-4">
-                  {loadingFolders ? (
-                    <div className="flex justify-center items-center">
-                      <p className="text-darkGray">Loading Folders. Please wait.</p>
-                    </div>
-                  ) : (
-                    <div>
-                      <h2 className="text-md text-darkGray">Select Folder</h2>
-                      <div className="max-h-[300px] overflow-y-auto">
-                        <FolderTree
-                          tree={dataFolders}
-                          onSelect={handleFolderSelect}
-                          selectedFolder={selectedFolder}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
               </div>
-            </Card>
 
-            {/* Field Configuration */}
-            <div className="flex flex-row gap-4">
-              <Card id="DEFieldConfig-Card" heading="Field Configuration" className="w-full mb-10">
-                <Table isHeaderSticky={true} aria-label="Fields" shadow="none">
-                  <TableHeader>
-                    <TableColumn className="bg-transparent">Field</TableColumn>
-                    <TableColumn className="bg-transparent">Type</TableColumn>
-                    <TableColumn className="bg-transparent">Length</TableColumn>
-                    <TableColumn className="bg-transparent">Primary Key</TableColumn>
-                    <TableColumn className="bg-transparent">Nullable</TableColumn>
-                    <TableColumn className="bg-transparent">Default value</TableColumn>
-                  </TableHeader>
-                  <TableBody>
-                    {deConfig.fields.map((field, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <Input
-                            defaultValue={field.name}
-                            size="sm"
-                            errorText={fieldErrors[index]}
-                            onChange={(e: any) =>
-                            {
-                              const newFieldName = e.target.value;
-                              const validationError = validateFieldName(newFieldName);
-                              setFieldErrors((prevErrors) => ({
-                                ...prevErrors,
-                                [index]: validationError,
-                              }));
-                              if (!validationError)
-                              {
-                                updateField(index, { name: newFieldName });
-                              }
-                            }}
-                          />
-                        </TableCell>
-                        <TableCell aria-hidden="false">
+            </div>
+          )}
+
+          {uploading && (
+            <div className="w-full mt-5">
+              <Spinner size="medium" variant="brand" hasContainer={true} />
+            </div>
+          )}
+
+          {file.name && deConfig.name && !uploading && (
+            <div className="mt-2">
+              <Card id="DEConfig-Card" heading="Data Extension Configuration" className="mb-10">
+                <div className="w-full flex">
+                  <div className="w-1/2">
+                    <div className="px-4">
+                      <Input
+                        label="Data Extension Name"
+                        defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
+                        size="lg"
+                        errorText={deNameError}
+                        onChange={(e: any) =>
+                        {
+                          const newName = e.target.value;
+                          const validationError = validateDeName(newName);
+                          if (validationError)
+                          {
+                            setdeNameError(validationError);
+                          } else
+                          {
+                            setdeNameError(null);
+                            setDeConfig((prev) => ({ ...prev, name: newName }));
+                          }
+                        }}
+                        className="pb-5"
+                      />
+
+
+                      <div className="flex-rows flex gap-x-4">
+                        <Checkbox
+                          isSelected={deConfig.isSendable}
+                          labels={{ label: "Is Sendable" }}
+                          onChange={(e: any) => setDeConfig((prev) => ({
+                            ...prev,
+                            isSendable: e.target.checked,
+                            subscriberKey: e.target.checked ? prev.subscriberKey : undefined, // Clear subscriberKey if not sendable
+                          }))}
+
+                        />
+
+                        <Checkbox
+                          isSelected={deConfig.isTestable}
+                          labels={{ label: "Is Testable" }}
+                          onChange={(e: any) => setDeConfig((prev) => ({ ...prev, isTestable: e.target.checked }))}
+                        >
+                          Is Testable
+                        </Checkbox>
+                      </div>
+                      {deConfig.isSendable && (
+                        <div className="mt-5">
                           <Select
-                            radius="sm"
+                            isRequired={true}
+                            placeholder="Select SubscriberKey Field"
+                            selectedKeys={new Set([deConfig.subscriberKey || ""])}
+                            onChange={(selectedKey) => handleSubscriberKeyChange(selectedKey.target.value)}
                             variant="bordered"
-                            size="sm"
-                            placeholder="Field Type"
-                            selectedKeys={new Set([field.type || "Text"])} // Default to 'Text'
+                            radius="sm"
 
-                            onChange={(selectedKey) =>
-                            {
-                              const newType = selectedKey.target.value as string;
-
-                              // Update the field with the selected type
-                              updateField(index, {
-                                type: newType,
-                                length: newType === "Decimal" ? undefined : typeToLengthMap[newType] || "",
-                                precision: newType === "Decimal" ? "18" : undefined,
-                                scale: newType === "Decimal" ? "0" : undefined,
-                              });
-                            }}
-                            style={{ minWidth: 150 }}
                           >
-                            {fieldTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {type}
+                            {deConfig.fields.map((field) => (
+                              <SelectItem key={field.name} value={field.name}>
+                                {field.name}
                               </SelectItem>
                             ))}
                           </Select>
-                        </TableCell>
+                        </div>
+                      )}
+                      <div className="py-4">
+                        <p>Save Location: <span className="font-bold">{selectedFolder?.name}</span></p>
+                      </div>
+                    </div>
+                  </div>
 
-                        <TableCell>
-                          {field.type === "Decimal" ? (
-                            <div className="flex flex-row gap-2">
+                  {/* Folder tree */}
+                  <div className="w-1/2 px-4">
+                    {loadingFolders ? (
+                      <div className="flex justify-center items-center">
+                        <p className="text-darkGray">Loading Folders. Please wait.</p>
+                      </div>
+                    ) : (
+                      <div>
+                        <h2 className="text-md text-darkGray">Select Folder</h2>
+                        <div className="max-h-[300px] overflow-y-auto">
+                          <FolderTree
+                            tree={dataFolders}
+                            onSelect={handleFolderSelect}
+                            selectedFolder={selectedFolder}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+
+              {/* Field Configuration */}
+              <div className="flex flex-row gap-4">
+                <Card id="DEFieldConfig-Card" heading="Field Configuration" className="w-full mb-10">
+                  <Table isHeaderSticky={true} aria-label="Fields" shadow="none">
+                    <TableHeader>
+                      <TableColumn className="bg-transparent">Field</TableColumn>
+                      <TableColumn className="bg-transparent">Type</TableColumn>
+                      <TableColumn className="bg-transparent">Length</TableColumn>
+                      <TableColumn className="bg-transparent">Primary Key</TableColumn>
+                      <TableColumn className="bg-transparent">Nullable</TableColumn>
+                      <TableColumn className="bg-transparent">Default value</TableColumn>
+                    </TableHeader>
+                    <TableBody>
+                      {deConfig.fields.map((field, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <Input
+                              defaultValue={field.name}
+                              size="sm"
+                              errorText={fieldErrors[index]}
+                              onChange={(e: any) =>
+                              {
+                                const newFieldName = e.target.value;
+                                const validationError = validateFieldName(newFieldName);
+                                setFieldErrors((prevErrors) => ({
+                                  ...prevErrors,
+                                  [index]: validationError,
+                                }));
+                                if (!validationError)
+                                {
+                                  updateField(index, { name: newFieldName });
+                                }
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell aria-hidden="false">
+                            <Select
+                              radius="sm"
+                              variant="bordered"
+                              size="sm"
+                              placeholder="Field Type"
+                              selectedKeys={new Set([field.type || "Text"])} // Default to 'Text'
+
+                              onChange={(selectedKey) =>
+                              {
+                                const newType = selectedKey.target.value as string;
+
+                                // Update the field with the selected type
+                                updateField(index, {
+                                  type: newType,
+                                  length: newType === "Decimal" ? undefined : typeToLengthMap[newType] || "",
+                                  precision: newType === "Decimal" ? "18" : undefined,
+                                  scale: newType === "Decimal" ? "0" : undefined,
+                                });
+                              }}
+                              style={{ minWidth: 150 }}
+                            >
+                              {fieldTypes.map((type) => (
+                                <SelectItem key={type} value={type}>
+                                  {type}
+                                </SelectItem>
+                              ))}
+                            </Select>
+                          </TableCell>
+
+                          <TableCell>
+                            {field.type === "Decimal" ? (
+                              <div className="flex flex-row gap-2">
+                                <Input
+
+                                  size="sm"
+                                  type="number"
+                                  value={field.precision || "18"}
+                                  onChange={(e: any) => updateField(index, { precision: e.target.value })}
+                                  disabled={field.type !== "Decimal"}
+                                />
+                                <Input
+
+                                  size="sm"
+                                  type="number"
+                                  value={field.scale || "0"}
+                                  disabled={field.type !== "Decimal"}
+                                  onChange={(e: any) => updateField(index, { scale: e.target.value })}
+                                />
+                              </div>
+                            ) : (
                               <Input
 
                                 size="sm"
                                 type="number"
-                                value={field.precision || "18"}
-                                onChange={(e: any) => updateField(index, { precision: e.target.value })}
-                                disabled={field.type !== "Decimal"}
+                                value={field.length}
+                                onChange={(e: any) => updateField(index, { length: e.target.value })}
+                                disabled={field.type !== "Text"}
                               />
-                              <Input
+                            )}
+                          </TableCell>
 
-                                size="sm"
-                                type="number"
-                                value={field.scale || "0"}
-                                disabled={field.type !== "Decimal"}
-                                onChange={(e: any) => updateField(index, { scale: e.target.value })}
-                              />
-                            </div>
-                          ) : (
+                          <TableCell>
+                            <Checkbox
+                              isSelected={field.isPrimaryKey}
+                              onChange={(e: any) =>
+                                updateField(index, {
+                                  isPrimaryKey: e.target.checked,
+                                  isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
+                                })
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Checkbox
+
+                              disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name} // Disable if primary key or subscriber key
+                              onChange={(e: any) => updateField(index, { isNullable: e.target.checked })}
+                              checked={field.isNullable}
+                            />
+                          </TableCell>
+                          <TableCell>
                             <Input
 
                               size="sm"
-                              type="number"
-                              value={field.length}
-                              onChange={(e: any) => updateField(index, { length: e.target.value })}
-                              disabled={field.type !== "Text"}
-                            />
-                          )}
-                        </TableCell>
-
-                        <TableCell>
-                          <Checkbox
-                            isSelected={field.isPrimaryKey}
-                            onChange={(e: any) =>
-                              updateField(index, {
-                                isPrimaryKey: e.target.checked,
-                                isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
-                              })
-                            }
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Checkbox
-
-                            disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name} // Disable if primary key or subscriber key
-                            onChange={(e: any) => updateField(index, { isNullable: e.target.checked })}
-                            checked={field.isNullable}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Input
-
-                            size="sm"
-                            defaultValue={field.defaultValue}
-                            onChange={(e: any) =>
-                              updateField(index, {
-                                defaultValue: e.target.value,
-                              })
-                            }
-                            disabled={field.type === "EmailAddress" ||
-                              field.type === 'Phone' ||
-                              field.type === 'Locale'
-                              || field.isPrimaryKey
-                              || deConfig.subscriberKey === field.name
-                              ? true : false} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </Card>
+                              defaultValue={field.defaultValue}
+                              onChange={(e: any) =>
+                                updateField(index, {
+                                  defaultValue: e.target.value,
+                                })
+                              }
+                              disabled={field.type === "EmailAddress" ||
+                                field.type === 'Phone' ||
+                                field.type === 'Locale'
+                                || field.isPrimaryKey
+                                || deConfig.subscriberKey === field.name
+                                ? true : false} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
             </div>
-          </div>
 
-        )}
-        {file.name && deConfig.name && (
-          <div>
-            <Button
-              style={{ height: '3em' }}
-              onClick={createDataExtension}
-              variant="brand"
-              className="w-full"
-              label={saving ?
-                <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
-                  <Spinner size="x-small" variant="inverse" hasContainer={false} />
-                </div> : "Create"}
-              disabled={saving || deNameError || Object.values(fieldErrors).some(error => error !== null)}
-            />
-          </div>
-        )}
+          )}
+          {file.name && deConfig.name && (
+            <div>
+              <Button
+                style={{ height: '3em' }}
+                onClick={createDataExtension}
+                variant="brand"
+                className="w-full"
+                label={saving ?
+                  <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
+                    <Spinner size="x-small" variant="inverse" hasContainer={false} />
+                  </div> : "Create"}
+                disabled={saving || deNameError || Object.values(fieldErrors).some(error => error !== null)}
+              />
+            </div>
+          )}
 
-      </div>
+        </div>
 
-    </div ></>
+      </div ></>
 
   );
 }

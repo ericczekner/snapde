@@ -15,75 +15,73 @@ async function getToken() {
 
 	const req = await fetch(authURL, {
 		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
+		headers: { "Content-Type": "application/json" },
 		body: JSON.stringify(payload),
 	});
 
 	const res = await req.json();
-
 	return res.access_token;
 }
 
 export async function POST(req: NextRequest) {
 	const { deConfig, file } = await req.json();
-	const { name } = deConfig;
-	console.log("deConfig", deConfig);
-	const payload = {
-		name: name,
-		key: "",
-		isActive: true,
-		isSendable: deConfig.isSendable || false,
-		isTestable: deConfig.isTestable || false,
-		categoryId: deConfig.folderId,
-		sendableCustomObjectField: deConfig.isSendable
-			? deConfig.subscriberKey
-			: "",
-		sendableSubscriberField: "_SubscriberKey",
-		fields: deConfig.fields.map(
-			(field: any, index: number) => {
-				return {
-					name: field.name,
-					type: field.type,
-					length:
-						field.type === "Decimal"
-							? parseInt(field.precision)
-							: parseInt(field.length) || null,
-					ordinal: index,
-					scale:
-						field.type === "Decimal"
-							? parseInt(field.scale)
-							: null,
-					isPrimaryKey: field.isPrimaryKey || false,
-					isNullable: field.isNullable || true,
-					defaultValue: field.defaultValue || null,
-					isTemplateField: false,
-					isInheritable: false,
-					isOverridable: true,
-					isHidden: false,
-					isReadOnly: false,
-					mustOverride: false,
-				};
-			}
-		),
-	};
-
-	const primaryKeyFields = payload.fields.filter(
-		(field: any) => field.isPrimaryKey
-	);
-	const uploadBody: string[] = [];
-	if (primaryKeyFields.length > 0) {
-		primaryKeyFields.forEach((field: any) => {
-			field.isNullable = false;
-			uploadBody.push(field.name);
-		});
-	}
+	const { name, dataLength } = deConfig;
 
 	const token = await getToken();
-	try {
-		const tenant = process.env.SFMC_TENANT;
+	const tenant = process.env.SFMC_TENANT;
 
+	// Define the response structure
+	let response = {
+		ok: false,
+		deCreated: false,
+		dataUploaded: false,
+		status: 400,
+		message: "",
+	};
+
+	try {
+		// Create Data Extension Payload
+		const payload = {
+			name: name,
+			key: "",
+			isActive: true,
+			isSendable: deConfig.isSendable || false,
+			isTestable: deConfig.isTestable || false,
+			categoryId: deConfig.folderId,
+			sendableCustomObjectField: deConfig.isSendable
+				? deConfig.subscriberKey
+				: "",
+			sendableSubscriberField: "_SubscriberKey",
+			fields: deConfig.fields.map(
+				(field: any, index: number) => {
+					console.log(field);
+					return {
+						name: field.name,
+						type: field.type,
+						length:
+							field.type === "Decimal"
+								? parseInt(field.precision)
+								: parseInt(field.length) || null,
+						ordinal: index,
+						scale:
+							field.type === "Decimal"
+								? parseInt(field.scale)
+								: null,
+						isPrimaryKey: field.isPrimaryKey ? true : false,
+						isNullable: field.isNullable ? true : false,
+						defaultValue: field.defaultValue || null,
+						isTemplateField: false,
+						isInheritable: false,
+						isOverridable: true,
+						isHidden: false,
+						isReadOnly: false,
+						mustOverride: false,
+					};
+				}
+			),
+		};
+
+		// Create Data Extension Request
 		const createReq = await fetch(
 			`https://${tenant}.rest.marketingcloudapis.com/data/v1/customobjects/`,
 			{
@@ -96,7 +94,8 @@ export async function POST(req: NextRequest) {
 			}
 		);
 		const createRes = await createReq.json();
-
+		console.log("Create Res: ", createRes);
+		// Handle creation errors
 		if (createRes.errorcode === 30004) {
 			return NextResponse.json({
 				ok: false,
@@ -104,149 +103,120 @@ export async function POST(req: NextRequest) {
 				error:
 					"Data extension with this name already exists",
 			});
+		} else if (!createReq.ok) {
+			return NextResponse.json({
+				ok: false,
+				status: 500,
+				error:
+					"An error occurred when creating the data extension. Please try refreshing and try again.",
+			});
 		}
 
+		// Capture the DE key
 		const deKey = createRes.key;
-		let response = {
-			ok: true,
-			deCreated: true,
-			status: 200,
-			dataUploaded: false,
-			message: "",
-		};
+		response.deCreated = true;
+		response.ok = true;
+		response.status = 200;
 
+		// Case 4: No file data provided → Skip Upload
+		if (!file || file.length === 0) {
+			response.message =
+				"Data Extension created successfully. No data was uploaded because no file was provided.";
+			return NextResponse.json(response);
+		}
+
+		// Case 3: If dataLength > 35,000, skip the upload process
+		if (dataLength > 35000) {
+			response.message =
+				"Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.";
+			return NextResponse.json(response);
+		}
+
+		// Prepare Data Upload Request
 		const hasPrimaryKeys = deConfig.fields.some(
 			(field: any) => field.isPrimaryKey === true
 		);
-
 		const uploadURL = hasPrimaryKeys
 			? `https://${tenant}.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`
 			: `https://${tenant}.rest.marketingcloudapis.com/data/v1/async/dataextensions/key:${deKey}/rows`;
+
+		// Transform file data into proper format
 		const uploadBody: any[] = [];
-		let uploadPayload;
+		file.forEach((row: any) => {
+			const keys: { [key: string]: any } = {};
+			const values: { [key: string]: any } = {};
 
-		if (hasPrimaryKeys) {
-			file.forEach((row: any) => {
-				const keys: { [key: string]: any } = {};
-				const values: { [key: string]: any } = {};
+			Object.entries(row).forEach(([key, value]) => {
+				let cleanedValue =
+					typeof value === "string"
+						? value.replaceAll(",", "")
+						: value;
+				const fieldConfig = deConfig.fields.find(
+					(field: any) =>
+						field.name.toLowerCase() === key.toLowerCase()
+				);
 
-				Object.entries(row).forEach(([key, value]) => {
-					let cleanedValue =
-						typeof value === "string"
-							? value.replaceAll(",", "")
-							: value;
+				if (fieldConfig && fieldConfig.type === "Number") {
+					cleanedValue = Number(cleanedValue);
+				}
 
-					const fieldConfig = deConfig.fields.find(
-						(field: any) =>
-							field.name.toLowerCase() === key.toLowerCase()
-					);
+				if (
+					(cleanedValue === "" ||
+						cleanedValue === undefined) &&
+					fieldConfig?.defaultValue
+				) {
+					cleanedValue = fieldConfig.defaultValue;
+				}
 
-					if (
-						fieldConfig &&
-						fieldConfig.type === "Number"
-					) {
-						cleanedValue = Number(cleanedValue);
-					}
-
-					// Use default value if the value is empty or undefined
-					if (
-						(cleanedValue === "" ||
-							cleanedValue === undefined) &&
-						fieldConfig &&
-						fieldConfig.defaultValue
-					) {
-						cleanedValue = fieldConfig.defaultValue;
-					}
-
-					if (
-						primaryKeyFields.some(
-							(field: any) =>
-								field.name.toLowerCase() ===
-								key.toLowerCase()
-						)
-					) {
-						keys[key] = cleanedValue;
-					} else {
-						values[key] = cleanedValue;
-					}
-				});
-
-				uploadBody.push({ keys, values });
-			});
-			uploadPayload = uploadBody;
-		} else {
-			const items = file.map((row: any) => {
-				const values: { [key: string]: any } = {};
-				Object.entries(row).forEach(([key, value]) => {
-					let cleanedValue =
-						typeof value === "string"
-							? value.replaceAll(",", "")
-							: value;
-
-					const fieldConfig = deConfig.fields.find(
-						(field: any) =>
-							field.name.toLowerCase() === key.toLowerCase()
-					);
-
-					if (
-						fieldConfig &&
-						fieldConfig.type === "Number"
-					) {
-						cleanedValue = Number(cleanedValue);
-					}
-
-					// Use default value if the value is empty or undefined
-					if (
-						(cleanedValue === "" ||
-							cleanedValue === undefined) &&
-						fieldConfig &&
-						fieldConfig.defaultValue
-					) {
-						cleanedValue = fieldConfig.defaultValue;
-					}
-
+				if (fieldConfig?.isPrimaryKey) {
+					keys[key] = cleanedValue;
+				} else {
 					values[key] = cleanedValue;
-				});
-				return values;
+				}
 			});
-			uploadPayload = { items };
-		}
+
+			uploadBody.push(
+				hasPrimaryKeys ? { keys, values } : values
+			);
+		});
+
 		const uploadReq = await fetch(uploadURL, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
 				Authorization: `Bearer ${token}`,
 			},
-			body: JSON.stringify(uploadPayload),
+			body: JSON.stringify(
+				hasPrimaryKeys ? uploadBody : { items: uploadBody }
+			),
 		});
 
+		const uploadRes = await uploadReq.json();
+		console.log("Upload Res: ", uploadRes);
+
 		if (!uploadReq.ok) {
-			console.log("Error uploading data!");
-			response.dataUploaded = false;
 			response.message =
 				"An error occurred when uploading data to the data extension";
-
 			return NextResponse.json(response);
 		}
 
-		const uploadRes = await uploadReq.json();
-
-		if (uploadRes.errorcode || uploadRes.errorcode === 0) {
+		if (uploadRes.errorcode) {
 			response.dataUploaded = false;
-			if (uploadRes.errorcode === 10006) {
-				response.message =
-					"Unable to save rows for data extension. Check the data types of the fields and try again.";
-			} else {
-				response.message = uploadRes.message;
-			}
+			response.message =
+				uploadRes.errorcode === 10006
+					? "Unable to save rows for data extension. Check the data types of the fields and try again."
+					: uploadRes.message;
 		} else {
 			response.dataUploaded = true;
+			response.message = "Data uploaded successfully.";
 		}
 
 		return NextResponse.json(response);
 	} catch (err: any) {
-		console.log(err);
+		console.log("Error: ", err);
 		return NextResponse.json({
+			ok: false,
+			status: 500,
 			error:
 				"An error occurred when creating the data extension",
 		});

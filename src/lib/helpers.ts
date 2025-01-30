@@ -97,6 +97,9 @@ export const validateDeName = (
 	if (/[!@#$%^*()[\]{}\\|:'",<>./?+=]/.test(name)) {
 		return "The DE name cannot contain special characters.";
 	}
+	if (name.length > 128) {
+		return "The DE name cannot be more than 128 characters long.";
+	}
 	return null;
 };
 

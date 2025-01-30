@@ -580,7 +580,7 @@ export default function Upload()
             </div>
           )}
 
-          {file.name && deConfig.name && !uploading && (
+          {file.name && !uploading && (
             <div className="mt-2">
               <Card id="DEConfig-Card" heading="Data Extension Configuration" className="mb-10">
                 <div className="w-full flex">
@@ -588,8 +588,9 @@ export default function Upload()
                     <div className="px-4">
                       <Input
                         label="Data Extension Name"
-                        defaultValue={file.name.substring(0, file.name.indexOf(".csv"))}
+                        value={deConfig.name} // Ensure this is controlled
                         size="lg"
+                        placeholder="Enter a name for the Data Extension" // Provide a fallback for empty state
                         errorText={deNameError}
                         onChange={(e: any) =>
                         {
@@ -817,7 +818,7 @@ export default function Upload()
             </div>
 
           )}
-          {file.name && deConfig.name && (
+          {file.name && (
             <div>
               <Button
                 style={{ height: '3em' }}
@@ -828,7 +829,7 @@ export default function Upload()
                   <div style={{ position: 'relative', paddingLeft: 20, paddingRight: 20 }}>
                     <Spinner size="x-small" variant="inverse" hasContainer={false} />
                   </div> : "Create"}
-                disabled={saving || deNameError || Object.values(fieldErrors).some(error => error !== null)}
+                disabled={saving || deNameError || Object.values(fieldErrors).some(error => error !== null) || !deConfig.name}
               />
             </div>
           )}

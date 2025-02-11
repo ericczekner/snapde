@@ -1,0 +1,783 @@
+[
+    {
+        "name": "AudienceBuilderResult",
+        "key": "A5BD29D6-D952-408E-BB56-0E342F113061",
+        "description": "Used for creating audience builder result destinations.",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "fa16f702-b99e-462d-9051-911c90c58080",
+        "SendableCustomObjectField": "SubscriberKey",
+        "SendableSubscriberField": "_SubscriberKey",
+        "DataRetentionPeriodLength": "6",
+        "DataRetentionPeriodUnitOfMeasure": "5",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "SubscriberKey",
+                "type": "Text",
+                "length": "254",
+                "isPrimaryKey": "True",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "CustomerKey",
+                "type": "Text",
+                "length": "256",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "AudienceId",
+                "type": "LongNumber",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "CONTEXTUAL_SUPPRESSION_LISTS",
+        "key": "3262C6AE-D816-46E9-BF42-74472D555F12",
+        "description": "Used to create new auto-suppression lists",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "d542c3bd-c981-e611-a5d3-8cdcd4aff7c9",
+        "SendableCustomObjectField": "Email Address",
+        "SendableSubscriberField": "_EmailAddress",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "Email Address",
+                "type": "EmailAddress",
+                "length": "254",
+                "isPrimaryKey": "True",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "Date Added",
+                "type": "Date",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "Einstein_MC_Predictive_Scores",
+        "key": "1B9BAA71-69DB-452D-907A-E4CF5FF7EE31",
+        "description": "Einstein_MC_Predictive_Scores",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "5d1a65c3-4f1a-4fa8-bcea-f8a627bb55dd",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "0",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+		"Fields": [
+            {
+                "name": "email_address",
+                "type": "Text",
+                "length": "256",
+                "isPrimaryKey": "True",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "EmailClickLikelihood",
+                "type": "Text",
+                "length": "256",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+			{
+				"name":"EmailClickScore",
+				"type": "Decimal",
+				"precision": "18",
+				"scale": "4",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"EmailOpenLikelihood",
+				"type": "Text",
+				"length": "256",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"EmailOpenScore",
+				"type": "Decimal",
+				"precision": "18",
+				"scale": "4",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"EmailSubscribeLikelihood",
+				"type": "Text",
+				"length": "256",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"EmailSubscribeScore",
+				"type": "Decimal",
+				"precision": "18",
+				"scale": "4",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"EmailEngagementPersona",
+				"type": "Text",
+				"length": "256",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"ConversionLikelihood",
+				"type":"Text",
+				"length": "256",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"ConversionScore",
+				"type": "Decimal",
+				"precision": "18",
+				"scale": "4",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"UpdatedDate",
+				"type": "Date",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			},
+			{
+				"name":"CreatedDate",
+				"type": "Date",
+				"isPrimaryKey": "False",
+				"isNullable": "True"
+			}
+        ]
+    },
+    {
+        "name": "Event DE Template",
+        "key": "A7CCBBFC-7180-4E40-AD5B-4D2D8747B9F5",
+        "description": "Event Data Extension Template",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "3388a102-7d96-433b-97bc-f20b3fdfe7a6",
+        "SendableCustomObjectField": "ContactKey",
+        "SendableSubscriberField": "_SubscriberKey",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "0",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+		"Fields":[
+            {
+                "name": "EventInstanceID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "True",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+			{
+                "name": "ParentEventInstanceID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+			{
+				"name":"ContactKey",
+				"type":"Text",
+				"length":"254",
+				"isPrimaryKey":"False",
+				"isNullable":"False"
+
+			}
+		]
+    },
+    {
+        "name": "OmnitureT&T",
+        "key": "89725B44-62E4-4B7E-9974-D4DAAC193208",
+        "description": "Omniture Test & Target Impression Template",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "b9229f59-452a-e511-9915-8cdcd4aff7c9",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "LiveContentInstanceID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "JobID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "ListID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "BatchID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "ViewUrl",
+                "type": "Text",
+                "length": "1024",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "ClickUrl",
+                "type": "Text",
+                "length": "1024",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "AdBoxName",
+                "type": "Text",
+                "length": "64",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "ClientName",
+                "type": "Text",
+                "length": "32",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "Impressions",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "Clicks",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "Name",
+                "type": "Number",
+                "length": "64",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "FirstActivity",
+                "type": "Date",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            },
+            {
+                "name": "MostRecentActivity",
+                "type": "Date",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "False",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "PushSendLog",
+        "key": "429BD409-304F-463A-82FF-56096538680C",
+        "description": "Push Send Log Data Extension Template",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "55414076-5e82-e811-a2c0-1402ec93666c",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "PushJobID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "PushTriggeredSendRequestID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "PushBatchID",
+                "type": "LongNumber",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "SubID",
+                "type": "LongNumber",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "DeviceId",
+                "type": "Text",
+                "length": "200",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "AppId",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "LogDate",
+                "type": "Date",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "SampleAudience",
+        "key": "810B38CC-A752-4DAF-B3D8-D39A0BFCEEDE",
+        "description": "Used to create new Sample Audience lists",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "eeec7d3b-7d2f-e711-80cc-1402ec72442d",
+        "SendableCustomObjectField": "SubscriberKey",
+        "SendableSubscriberField": "_SubscriberKey",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "SubscriberKey",
+                "type": "Text",
+                "length": "254",
+                "isPrimaryKey": "True",
+                "isNullable": "False",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "SendLog",
+        "key": "8C95CB29-76C0-4F36-81EB-6E9689BE9540",
+        "description": "Send Log Data Extension Template",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "e4a2a272-aa64-e611-97ba-8cdcd4a8b025",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "JobID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "ListID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "BatchID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "SubID",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "TriggeredSendID",
+                "type": "Text",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "ErrorCode",
+                "type": "Number",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "SmartCapture - Contacts Template Extension",
+        "key": "A7B6E9F6-2C7A-4883-B910-3997DFF0C494",
+        "description": "Required for contacts.  Used by Smart Capture for Social Pages.",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "189fe8eb-e52c-439f-80e2-e39563a9bd28",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+		"Fields":[
+			{
+				"name":"Source",
+				"type":"Number",
+				"length":"",
+				"isPrimaryKey":"False",
+				"isNullable":"False",
+				"defaultValue":"0"
+			},
+			{
+				"name:":"EmailAddress",
+				"type":"EmailAddress",
+				"length":"254",
+				"isPrimaryKey":"False",
+				"isNullable":"False"
+			},
+			{
+				"name":"CreateDate",
+				"type":"Date",
+				"isPrimaryKey":"False",
+				"isNullable":"False",
+				"DefaultValue":"GETDATE()"
+			}
+		]
+    },
+    {
+        "name": "SmsSendLog",
+        "key": "0B3BA9FE-1AA3-453A-BD73-EAE88C341EC1",
+        "description": "SMS Send Log Data Extension Template",
+        "isSendable": "False",
+        "isTestable": "False",
+        "objectId": "faa2a272-aa64-e611-97ba-8cdcd4a8b025",
+        "SendableCustomObjectField": "",
+        "SendableSubscriberField": "",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "SmsJobID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "SmsTriggeredSendID",
+                "type": "Text",
+                "length": "36",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "SmsBatchID",
+                "type": "LongNumber",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "SubID",
+                "type": "LongNumber",
+                "length": "",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            }
+        ]
+    },
+    {
+        "name": "SocialPages Default Template Extension",
+        "key": "66D1E03E-12DF-4338-B20D-9901DF100FEF",
+        "description": "Required for contacts.  Used by Smart Capture for Social Pages.",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "fe239f59-452a-e511-9915-8cdcd4aff7c9",
+        "SendableCustomObjectField": "EmailAddress",
+        "SendableSubscriberField": "_SubscriberKey",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+		"Fields":[
+			{
+				"name":"Source",
+				"type":"Number",
+				"length":"",
+				"isPrimaryKey":"False",
+				"isNullable":"False",
+				"defaultValue":"0"
+			},
+			{
+				"name:":"EmailAddress",
+				"type":"EmailAddress",
+				"length":"254",
+				"isPrimaryKey":"False",
+				"isNullable":"False"
+			},
+			{
+				"name":"CreateDate",
+				"type":"Date",
+				"isPrimaryKey":"False",
+				"isNullable":"False",
+				"DefaultValue":"GETDATE()"
+			},
+			{
+				"name":"LastName",
+				"type":"Text",
+				"length":"100",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+
+			},
+			{
+				"name":"FirstName",
+				"type":"Text",
+				"length":"100",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"Address",
+				"type":"Text",
+				"length":"2000",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+
+			},
+			{
+				"name":"City",
+				"type":"Text",
+				"length":"200",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"State",
+				"type":"Text",
+				"length":"200",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"ZipCode",
+				"type":"Text",
+				"length":"20",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"Locale",
+				"type":"Text",
+				"length":"15",
+				"isPrimaryKey":"False",
+				"isNullable":"False",
+				"DefaultValue":"en_US"
+			},
+			{
+				"name":"Phone",
+				"type":"Text",
+				"length":"15",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"Gender",
+				"type":"Text",
+				"length":"15",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"BirthDate",
+				"type":"Text",
+				"length":"15",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"Email_Opt_in",
+				"type":"Boolean",
+				"isPrimaryKey":"False",
+				"isNullable":"False"
+			},
+			{
+				"name":"Mobile_Opt_In",
+				"type":"Boolean",
+				"isPrimaryKey":"False",
+				"isNullable":"False"
+			},
+			{
+				"name":"Country",
+				"type":"Text",
+				"length":"200",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"Company",
+				"type":"Text",
+				"length":"200",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			},
+			{
+				"name":"PageID",
+				"type":"LongNumber",
+				"isPrimaryKey":"False",
+				"isNullable":"True"
+			}
+		]
+    },
+    {
+        "name": "TriggeredSendDataExtension",
+        "key": "663EA7FF-E6B4-43F4-ACE6-4E09B55189D5",
+        "description": "Triggered Send Source Data Extension Template",
+        "isSendable": "True",
+        "isTestable": "False",
+        "objectId": "92435f89-412a-e511-9915-8cdcd4aff7c9",
+        "SendableCustomObjectField": "SubscriberKey",
+        "SendableSubscriberField": "_SubscriberKey",
+        "DataRetentionPeriodLength": "",
+        "DataRetentionPeriodUnitOfMeasure": "",
+        "ResetRetentionPeriodOnImport": "False",
+        "RowBasedRetention": "False",
+        "DeleteAtEndOfRetentionPeriod": "False",
+        "RetainUntil": "",
+        "Fields": [
+            {
+                "name": "SubscriberKey",
+                "type": "Text",
+                "length": "254",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            },
+            {
+                "name": "EmailAddress",
+                "type": "EmailAddress",
+                "length": "254",
+                "isPrimaryKey": "False",
+                "isNullable": "True",
+                "defaultValue": ""
+            }
+        ]
+    }
+]

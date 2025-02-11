@@ -32,7 +32,8 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { isCsv, guessFieldType, validateDeName, validateFieldName } from "../lib/helpers";
 
 //import types
-import { field } from "../lib/types";
+import { field, templateType } from "../lib/types";
+import templateSchema from "../lib/deTemplateMap.json";
 
 //import custom components
 import FolderTree from "@/components/FolderTree";
@@ -56,6 +57,7 @@ export default function Upload()
     subscriberKey?: string;
     folderId?: string;
     dataLength: number;
+    fromTemplate?: boolean;
   }>({
     name: "",
     fields: [],
@@ -63,6 +65,7 @@ export default function Upload()
     isTestable: false,
     folderId: "",
     dataLength: 0,
+    fromTemplate: false,
   });
   const [showAlert, setShowAlert] = useState({
     shown: false,
@@ -75,12 +78,18 @@ export default function Upload()
   const [fieldErrors, setFieldErrors] = useState<{ [key: number]: string | null }>({});
   const [uploading, setUploading] = useState(false);
 
+  const [templateTypes, setTemplateTypes] = useState<templateType[]>([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(true);
+  const fieldTypes = ["Text", "Number", "Date", "Boolean", "EmailAddress", "Phone", "Decimal", "Locale"];
+  const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
+  const api_url = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://snapde.vercel.app';
+
   useEffect(() =>
   {
 
     async function fetchFolders()
     {
-      const response = await fetch('https://snapde.vercel.app/api/get-folders');
+      const response = await fetch(`${api_url}/api/get-folders`);
       const data = await response.json();
 
       setSelectedFolder(data[0]);
@@ -88,7 +97,18 @@ export default function Upload()
       setDataFolders(data);
       setLoadingFolders(false);
     }
+
+
+    async function getTemplateTypes()
+    {
+      const response = await fetch(`${api_url}/api/get-templates`);
+      const data = await response.json();
+      const sortedTypes = data.sort((a: templateType, b: templateType) => a.name.localeCompare(b.name));
+      setTemplateTypes(sortedTypes);
+      setLoadingTemplates(false);
+    }
     fetchFolders();
+    getTemplateTypes();
   }, [])
 
   const uploadFile = async (file: any) =>
@@ -171,6 +191,7 @@ export default function Upload()
               isPrimaryKey: false,
               isNullable: true,
               defaultValue: "",
+              fromTemplate: false,
             };
           });
 
@@ -185,7 +206,7 @@ export default function Upload()
           setDeConfig((prev) => ({
             ...prev,
             name: file.name.substring(0, file.name.indexOf(".csv")),
-            fields: fieldArr,
+            fields: [...prev.fields, ...fieldArr.filter(newField => !prev.fields.some(field => field.name === newField.name))],
             isSendable: false,
             isTestable: false,
             folderId: selectedFolder?.id || prev.folderId,
@@ -247,95 +268,96 @@ export default function Upload()
 
   const createDataExtension = async () =>
   {
-    setSaving(true);
-    setShowAlert({
-      shown: false,
-      title: "",
-      description: "",
-      type: "success",
-    });
-
-    if (deConfig.isSendable && deConfig.subscriberKey === undefined)
-    {
-      alert("Please select a subscriber key field");
-      return;
-    }
-
     console.log(deConfig)
+    //   setSaving(true);
+    //   setShowAlert({
+    //     shown: false,
+    //     title: "",
+    //     description: "",
+    //     type: "success",
+    //   });
 
-    const res = await fetch('https://snapde.vercel.app/api/create-de', {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ deConfig, file: tableData }),
-    });
+    //   if (deConfig.isSendable && deConfig.subscriberKey === undefined)
+    //   {
+    //     alert("Please select a subscriber key field");
+    //     return;
+    //   }
 
-    const data = await res.json();
+    //   console.log(deConfig)
 
-    if (data.ok)
-    {
-      console.log("Data: ", data);
-      if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength < 35000)
-      {
+    //   const res = await fetch(`${api_url}/api/create-de`, {
+    //     method: "POST",
+    //     headers: {
+    //       'Content-Type': 'application/json'
+    //     },
+    //     body: JSON.stringify({ deConfig, file: tableData }),
+    //   });
 
-        setShowAlert({
-          shown: true,
-          title: "Data Extension Created and Data Uploaded!",
-          description: "Data Extension has been created and loaded successfully",
-          type: "success",
-        });
-      } else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength < 35000)
-      {
+    //   const data = await res.json();
 
-        setShowAlert({
-          shown: true,
-          title: "Data extension created, but there was an error uploading data",
-          description: data.message,
-          type: "warning",
-        });
-      }
-      else if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength >= 35000)
-      {
-        setShowAlert({
-          shown: true,
-          title: "Data Extension Created",
-          description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
-          type: "success",
-        });
-      }
-      else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength >= 35000)
-      {
-        setShowAlert({
-          shown: true,
-          title: "Data Extension Created",
-          description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
-          type: "success",
-        });
-      }
-      handleResetFile();
+    //   if (data.ok)
+    //   {
+    //     console.log("Data: ", data);
+    //     if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength < 35000)
+    //     {
 
-      // Automatically close the alert after 5 seconds
-      setTimeout(() =>
-      {
-        setShowAlert({ shown: false, title: "", description: "", type: "success" });
-      }, 5000);
-    } else
-    {
-      setShowAlert({
-        shown: true,
-        title: "Error",
-        description: data.error,
-        type: "danger",
-      });
+    //       setShowAlert({
+    //         shown: true,
+    //         title: "Data Extension Created and Data Uploaded!",
+    //         description: "Data Extension has been created and loaded successfully",
+    //         type: "success",
+    //       });
+    //     } else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength < 35000)
+    //     {
 
-      // Automatically close the alert after 5 seconds
-      setTimeout(() =>
-      {
-        setShowAlert({ shown: false, title: "", description: "", type: "success" });
-      }, 5000);
-    }
-    setSaving(false);
+    //       setShowAlert({
+    //         shown: true,
+    //         title: "Data extension created, but there was an error uploading data",
+    //         description: data.message,
+    //         type: "warning",
+    //       });
+    //     }
+    //     else if (data.deCreated === true && data.dataUploaded === true && deConfig.dataLength >= 35000)
+    //     {
+    //       setShowAlert({
+    //         shown: true,
+    //         title: "Data Extension Created",
+    //         description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
+    //         type: "success",
+    //       });
+    //     }
+    //     else if (data.deCreated === true && data.dataUploaded === false && deConfig.dataLength >= 35000)
+    //     {
+    //       setShowAlert({
+    //         shown: true,
+    //         title: "Data Extension Created",
+    //         description: "Data Extension created successfully. However, the data was not uploaded due to the large number of rows. You will need to upload the data manually.",
+    //         type: "success",
+    //       });
+    //     }
+    //     handleResetFile();
+
+    //     // Automatically close the alert after 5 seconds
+    //     setTimeout(() =>
+    //     {
+    //       setShowAlert({ shown: false, title: "", description: "", type: "success" });
+    //     }, 5000);
+    //   } else
+    //   {
+    //     setShowAlert({
+    //       shown: true,
+    //       title: "Error",
+    //       description: data.error,
+    //       type: "danger",
+    //     });
+
+    //     // Automatically close the alert after 5 seconds
+    //     setTimeout(() =>
+    //     {
+    //       setShowAlert({ shown: false, title: "", description: "", type: "success" });
+    //     }, 5000);
+    //   }
+    //   setSaving(false);
   };
 
   const updateField = (index: number, updatedField: Partial<field>) =>
@@ -386,9 +408,6 @@ export default function Upload()
     Decimal: "10", // Example default length for Decimal
   };
 
-  const fieldTypes = ["Text", "Number", "Date", "Boolean", "EmailAddress", "Phone", "Decimal", "Locale"];
-  const [selectedFolder, setSelectedFolder] = useState<any | null>(null);
-
   const handleFolderSelect = (folder: any) =>
   {
     setSelectedFolder(folder);
@@ -397,13 +416,55 @@ export default function Upload()
     console.log(deConfig);
   };
 
+  const handleTemplateSelect = (template: string) =>
+  {
+    const matchedSchema = templateSchema.find((schema) => schema.name === template);
+
+    setDeConfig((prev) =>
+    {
+      // Filter out fields that are part of the previous template
+      const nonTemplateFields = prev.fields.filter(field => !field.fromTemplate);
+
+      // Map new fields from the selected template
+      const newFields = matchedSchema?.Fields.map(field => ({
+        ...field,
+        name: field.name || "",
+        type: field.type || "Text",
+        isPrimaryKey: field.isPrimaryKey === "True" ? true : false,
+        isNullable: field.isNullable === "True" ? true : false,
+        length: field.length || "",
+        defaultValue: field.defaultValue || "",
+        fromTemplate: true,
+      })) || [];
+
+      // Merge non-template fields with new template fields, giving precedence to template fields
+      const mergedFields = [...newFields, ...nonTemplateFields.filter(nonTemplateField => !newFields.some(newField => newField.name === nonTemplateField.name))];
+
+      return {
+        ...prev,
+        name: matchedSchema?.name || "",
+        fields: mergedFields,
+        isSendable: matchedSchema?.isSendable === "True",
+        isTestable: matchedSchema?.isTestable === "True",
+        subscriberKey: matchedSchema?.SendableCustomObjectField || prev.subscriberKey,
+        folderId: selectedFolder?.id || "",
+        dataLength: prev.dataLength,
+        fromTemplate: true,
+      };
+    });
+
+    setFile({ name: matchedSchema!.name, url: "", type: "" });
+  };
+
   return (
     <>
+
       {/* Saving icon */}
       {saving && (
         <Spinner size="medium" variant="brand" hasContainer={true} />
       )}
       <div className="items-center gap-8 w-full p-8">
+        {/* ALERT WINDOW */}
         {showAlert.shown && (
           <div className="mb-5">
             <IconSettings iconPath="/icons">
@@ -411,25 +472,10 @@ export default function Upload()
                 <Alert
                   dismissable={true}
                   icon={showAlert.type === "danger" || showAlert.type === "warning" ? <Icon category="utility" name="error" style={{ color: 'white' }} className="white-icon" /> : <Icon category="utility" name="info" style={{ color: 'white' }} className="white-icon" />}
-
                   labels={{
                     heading: (
                       <>
                         {showAlert.title} - {showAlert.description}
-                        {/* <button
-                        style={{
-                          marginLeft: '20px',
-
-                          backgroundColor: 'transparent',
-                          border: 'none',
-                          color: 'white',
-                          cursor: 'pointer',
-
-                        }}
-                        onClick={() => setShowAlert({ shown: false, title: "", description: "", type: "success" })}
-                      >
-                        <XMarkIcon className="w-5 h-5 text-white-500" />
-                      </button> */}
                       </>
                     ),
                   }}
@@ -443,7 +489,7 @@ export default function Upload()
         )}
 
         {/* Loading Icon */}
-        {loadingFolders && (
+        {loadingFolders && loadingTemplates && (
           <Spinner size="large" variant="brand" hasContainer={true} />
         )}
 
@@ -453,19 +499,37 @@ export default function Upload()
         </div>
 
         <p className="text-lg text-darkGray">
-          Add a CSV file to create a new data extension.
+          Add a CSV file to create a new data extension or choose a DE Template to start with.
         </p>
+
+        {/* Template Panel */}
+        {/* TODO: Finish this design so that a DE can be created from a template */}
+        {/* {templateTypes.length > 0 && (
+          <div className="my-4">
+            <Select
+              isRequired={false}
+              placeholder="Select DE Template"
+              onChange={(selectedKey) => handleTemplateSelect(selectedKey.target.value)}
+              variant="bordered"
+              radius="sm"
+            >
+              {templateTypes.map((templateType) => (
+                <SelectItem key={templateType.name} value={templateType.name}>
+                  {templateType.name}
+                </SelectItem>
+              ))}
+            </Select>
+          </div>
+        )} */}
 
         <div className="w-full gap-4">
           {/* Table Panel */}
-
-          {!file.name ? (
+          {!file.name || deConfig.fromTemplate ? (
             <div
               className={`grid grid-cols-1 items-center bg-gray-50 rounded-lg p-6 shadow cursor-pointer ${tableData.length > 0 ? 'w-full' : 'w-full'}`}
             >
               <div className="w-full">
                 <div
-
                   onDragOver={(e) =>
                   {
                     e.preventDefault();
@@ -496,12 +560,9 @@ export default function Upload()
                               url: blobUrl,
                               type: file.type,
                             });
-                          }
-                          else
+                          } else
                           {
-                            alert(
-                              "Invalid file type. Please upload a CSV file."
-                            );
+                            alert("Invalid file type. Please upload a CSV file.");
                           }
                         }
                       });
@@ -531,9 +592,10 @@ export default function Upload()
                           name: files[0].name,
                           url: blobUrl,
                           type: files[0].type,
-                        })
+                        });
                       }
-                    }} />
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -543,7 +605,6 @@ export default function Upload()
             >
               <div className="w-full">
                 <div className="relative gap-4 items-center justify-between">
-
                   <Files id={file.name} className="flex-1 flex-row gap-4 items-center justify-between">
                     <div className="relative">
                       {/* File Component */}
@@ -558,19 +619,15 @@ export default function Upload()
                         className="flex-1 h-[10em] w-[10em]"
                         image={`${file.type === "text/csv" ? "/icons/doctype/csv.svg" : "/file.svg"}`}
                       />
-
-
                     </div>
                   </Files>
                   {/* X Icon */}
                   <XMarkIcon
                     className="absolute top-0 left-20 ml-[45px] w-6 h-6 text-red-500 cursor-pointer"
-                    onClick={() => { handleResetFile(), setShowAlert({ shown: false, title: "", description: "", type: "success" }) }}
+                    onClick={() => { handleResetFile(); setShowAlert({ shown: false, title: "", description: "", type: "success" }) }}
                   />
                 </div>
-
               </div>
-
             </div>
           )}
 
@@ -588,46 +645,38 @@ export default function Upload()
                     <div className="px-4">
                       <Input
                         label="Data Extension Name"
-                        value={deConfig.name} // Ensure this is controlled
+                        value={deConfig.name}
                         size="lg"
-                        placeholder="Enter a name for the Data Extension" // Provide a fallback for empty state
+                        placeholder="Enter a name for the Data Extension"
                         errorText={deNameError}
                         onChange={(e: any) =>
                         {
                           const newName = e.target.value;
                           const validationError = validateDeName(newName);
-                          if (validationError)
-                          {
-                            setdeNameError(validationError);
-                          } else
-                          {
-                            setdeNameError(null);
-                            setDeConfig((prev) => ({ ...prev, name: newName }));
-                          }
+                          setDeConfig((prev) => ({ ...prev, name: newName }));
+                          setdeNameError(validationError);
                         }}
                         className="pb-5"
                       />
 
-
                       <div className="flex-rows flex gap-x-4">
                         <Checkbox
-                          isSelected={deConfig.isSendable}
+                          checked={deConfig.isSendable}
                           labels={{ label: "Is Sendable" }}
                           onChange={(e: any) => setDeConfig((prev) => ({
                             ...prev,
                             isSendable: e.target.checked,
-                            subscriberKey: e.target.checked ? prev.subscriberKey : undefined, // Clear subscriberKey if not sendable
+                            subscriberKey: e.target.checked ? prev.subscriberKey : undefined,
                           }))}
-
+                          disabled={deConfig.fromTemplate}
                         />
 
                         <Checkbox
-                          isSelected={deConfig.isTestable}
+                          checked={deConfig.isTestable}
                           labels={{ label: "Is Testable" }}
                           onChange={(e: any) => setDeConfig((prev) => ({ ...prev, isTestable: e.target.checked }))}
-                        >
-                          Is Testable
-                        </Checkbox>
+                          disabled={deConfig.fromTemplate}
+                        />
                       </div>
                       {deConfig.isSendable && (
                         <div className="mt-5">
@@ -638,7 +687,6 @@ export default function Upload()
                             onChange={(selectedKey) => handleSubscriberKeyChange(selectedKey.target.value)}
                             variant="bordered"
                             radius="sm"
-
                           >
                             {deConfig.fields.map((field) => (
                               <SelectItem key={field.name} value={field.name}>
@@ -676,6 +724,7 @@ export default function Upload()
                 </div>
               </Card>
 
+
               {/* Field Configuration */}
               <div className="flex flex-row gap-4">
                 <Card id="DEFieldConfig-Card" heading="Field Configuration" className="w-full mb-10">
@@ -693,22 +742,25 @@ export default function Upload()
                         <TableRow key={index}>
                           <TableCell>
                             <Input
-                              defaultValue={field.name}
+                              value={field.name}
                               size="sm"
                               errorText={fieldErrors[index]}
                               onChange={(e: any) =>
                               {
                                 const newFieldName = e.target.value;
                                 const validationError = validateFieldName(newFieldName);
+                                setDeConfig((prev) =>
+                                {
+                                  const updatedFields = [...prev.fields];
+                                  updatedFields[index].name = newFieldName;
+                                  return { ...prev, fields: updatedFields };
+                                });
                                 setFieldErrors((prevErrors) => ({
                                   ...prevErrors,
                                   [index]: validationError,
                                 }));
-                                if (!validationError)
-                                {
-                                  updateField(index, { name: newFieldName });
-                                }
                               }}
+                              disabled={field.fromTemplate}
                             />
                           </TableCell>
                           <TableCell aria-hidden="false">
@@ -718,7 +770,6 @@ export default function Upload()
                               size="sm"
                               placeholder="Field Type"
                               selectedKeys={new Set([field.type || "Text"])} // Default to 'Text'
-
                               onChange={(selectedKey) =>
                               {
                                 const newType = selectedKey.target.value as string;
@@ -732,6 +783,7 @@ export default function Upload()
                                 });
                               }}
                               style={{ minWidth: 150 }}
+                              disabled={field.fromTemplate}
                             >
                               {fieldTypes.map((type) => (
                                 <SelectItem key={type} value={type}>
@@ -745,30 +797,27 @@ export default function Upload()
                             {field.type === "Decimal" ? (
                               <div className="flex flex-row gap-2">
                                 <Input
-
                                   size="sm"
                                   type="number"
                                   value={field.precision || "18"}
                                   onChange={(e: any) => updateField(index, { precision: e.target.value })}
-                                  disabled={field.type !== "Decimal"}
+                                  disabled={field.type !== "Decimal" || field.fromTemplate}
                                 />
                                 <Input
-
                                   size="sm"
                                   type="number"
                                   value={field.scale || "0"}
-                                  disabled={field.type !== "Decimal"}
+                                  disabled={field.type !== "Decimal" || field.fromTemplate}
                                   onChange={(e: any) => updateField(index, { scale: e.target.value })}
                                 />
                               </div>
                             ) : (
                               <Input
-
                                 size="sm"
                                 type="number"
                                 value={field.length}
                                 onChange={(e: any) => updateField(index, { length: e.target.value })}
-                                disabled={field.type !== "Text"}
+                                disabled={field.type !== "Text" || field.fromTemplate}
                               />
                             )}
                           </TableCell>
@@ -782,21 +831,20 @@ export default function Upload()
                                   isNullable: e.target.checked ? false : field.isNullable, // Set nullable to false if primary key
                                 })
                               }
+                              disabled={field.fromTemplate}
                             />
                           </TableCell>
                           <TableCell>
                             <Checkbox
-
-                              disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name} // Disable if primary key or subscriber key
+                              disabled={field.isPrimaryKey || deConfig.subscriberKey === field.name || field.fromTemplate} // Disable if primary key or subscriber key
                               onChange={(e: any) => updateField(index, { isNullable: e.target.checked })}
                               checked={field.isNullable}
                             />
                           </TableCell>
                           <TableCell>
                             <Input
-
                               size="sm"
-                              defaultValue={field.defaultValue}
+                              value={field.defaultValue}
                               onChange={(e: any) =>
                                 updateField(index, {
                                   defaultValue: e.target.value,
@@ -807,6 +855,7 @@ export default function Upload()
                                 field.type === 'Locale'
                                 || field.isPrimaryKey
                                 || deConfig.subscriberKey === field.name
+                                || field.fromTemplate
                                 ? true : false} />
                           </TableCell>
                         </TableRow>
@@ -816,7 +865,6 @@ export default function Upload()
                 </Card>
               </div>
             </div>
-
           )}
           {file.name && (
             <div>

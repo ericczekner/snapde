@@ -63,31 +63,31 @@ export async function GET(
 	const accessToken = await getToken();
 
 	const soapRequest = `
-<s:Envelope xmlns:s='http://www.w3.org/2003/05/soap-envelope' xmlns:a='http://schemas.xmlsoap.org/ws/2004/08/addressing' xmlns:u='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'>
-    <s:Header>
-        <a:Action s:mustUnderstand='1'>Retrieve</a:Action>
-        <a:To s:mustUnderstand='1'>${soapEndpoint}</a:To>
-        <fueloauth xmlns='http://exacttarget.com'>${accessToken}</fueloauth>
-    </s:Header>
-    <s:Body xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema'>
-         <RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
-            <RetrieveRequest>
-                <ObjectType>DataFolder</ObjectType>
-                <Properties>ID</Properties>
-                <Properties>Name</Properties>
-                <Properties>ContentType</Properties>
-                <Properties>ParentFolder.Name</Properties>
-                <Properties>ParentFolder.ID</Properties>
-                <Filter xsi:type="SimpleFilterPart">
-                    <Property>ContentType</Property>
-                    <SimpleOperator>equals</SimpleOperator>
-                    <Value>dataextension</Value>
-                </Filter>
-            </RetrieveRequest>
-        </RetrieveRequestMsg>
-    </s:Body>
-</s:Envelope>
-  `;
+		<s:Envelope xmlns:s='http://www.w3.org/2003/05/soap-envelope' xmlns:a='http://schemas.xmlsoap.org/ws/2004/08/addressing' xmlns:u='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'>
+			<s:Header>
+				<a:Action s:mustUnderstand='1'>Retrieve</a:Action>
+				<a:To s:mustUnderstand='1'>${soapEndpoint}</a:To>
+				<fueloauth xmlns='http://exacttarget.com'>${accessToken}</fueloauth>
+			</s:Header>
+			<s:Body xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema'>
+				<RetrieveRequestMsg xmlns="http://exacttarget.com/wsdl/partnerAPI">
+					<RetrieveRequest>
+						<ObjectType>DataFolder</ObjectType>
+						<Properties>ID</Properties>
+						<Properties>Name</Properties>
+						<Properties>ContentType</Properties>
+						<Properties>ParentFolder.Name</Properties>
+						<Properties>ParentFolder.ID</Properties>
+						<Filter xsi:type="SimpleFilterPart">
+							<Property>ContentType</Property>
+							<SimpleOperator>equals</SimpleOperator>
+							<Value>dataextension</Value>
+						</Filter>
+					</RetrieveRequest>
+				</RetrieveRequestMsg>
+			</s:Body>
+		</s:Envelope>
+		`;
 
 	try {
 		const response = await fetch(soapEndpoint, {

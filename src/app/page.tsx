@@ -74,13 +74,14 @@ export default function Upload()
   const [deNameError, setdeNameError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<{ [key: number]: string | null }>({});
   const [uploading, setUploading] = useState(false);
+  const api_url = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://snapde.vercel.app';
 
   useEffect(() =>
   {
 
     async function fetchFolders()
     {
-      const response = await fetch('https://snapde.vercel.app/api/get-folders');
+      const response = await fetch(`${api_url}/api/get-folders`);
       const data = await response.json();
 
       setSelectedFolder(data[0]);

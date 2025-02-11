@@ -56,7 +56,7 @@ export const guessFieldType = (
 	const isDate = trimmedData.every((value) =>
 		dateRegex.test(value)
 	);
-	console.log("isDate", isDate);
+
 	if (isDate) return "Date";
 
 	// Check for Locale
@@ -77,7 +77,7 @@ export const guessFieldType = (
 	const isNumber = trimmedData.every((value) =>
 		numberRegex.test(value)
 	);
-	console.log("isNumber", isNumber);
+
 	if (isNumber) return "Number";
 
 	// Default to Text

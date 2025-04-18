@@ -64,7 +64,7 @@ export default function UploadPage()
         {
             try
             {
-                const res = await fetch("/api/me");
+                const res = await fetch(`${api_url}/api/me`);
                 const data = await res.json();
                 if (data.ok) setUserContext({ mid: data.mid, buName: data.buName });
             } finally

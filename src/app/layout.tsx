@@ -55,7 +55,7 @@ export default function RootLayout({
             </div>
           </header> */}
           <div className="grid font-sans">
-            <main className="flex  gap-8 sm:items-start">
+            <main >
               {children}
             </main>
           </div>

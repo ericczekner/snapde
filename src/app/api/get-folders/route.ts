@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import crypto from "crypto";
 import { parseStringPromise } from "xml2js";
+import { getSession } from "@/lib/session";
 
 // Type for a single folder
 export interface Folder {
@@ -24,49 +27,16 @@ interface SoapResponse {
 	};
 }
 
-async function getToken() {
-	const tenant = process.env.SFMC_TENANT;
-	const client_id = process.env.SFMC_CLIENT_ID;
-	const client_secret = process.env.SFMC_CLIENT_SECRET;
-	const account_id = process.env.SFMC_ACCOUNT_ID;
-	const authURL = `https://${tenant}.auth.marketingcloudapis.com/v2/token`;
-	const payload = {
-		grant_type: "client_credentials",
-		client_id: client_id,
-		client_secret: client_secret,
-		account_id: account_id,
-	};
-
-	const req = await fetch(authURL, {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/json",
-		},
-		body: JSON.stringify(payload),
-	});
-
-	if (!req.ok) {
-		throw new Error(
-			`Token request failed with status ${req.status}`
-		);
-	}
-
-	const res = await req.json();
-	return res.access_token;
-}
-
 export async function GET(
 	req: NextRequest
 ): Promise<NextResponse> {
-	const tenant = process.env.SFMC_TENANT;
-	const soapEndpoint = `https://${tenant}.soap.marketingcloudapis.com/Service.asmx`;
-	const accessToken = await getToken();
+	const { accessToken, soapURL } = await getSession();
 
 	const soapRequest = `
 <s:Envelope xmlns:s='http://www.w3.org/2003/05/soap-envelope' xmlns:a='http://schemas.xmlsoap.org/ws/2004/08/addressing' xmlns:u='http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'>
     <s:Header>
         <a:Action s:mustUnderstand='1'>Retrieve</a:Action>
-        <a:To s:mustUnderstand='1'>${soapEndpoint}</a:To>
+        <a:To s:mustUnderstand='1'>${soapURL}/Service.asmx</a:To>
         <fueloauth xmlns='http://exacttarget.com'>${accessToken}</fueloauth>
     </s:Header>
     <s:Body xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xsd='http://www.w3.org/2001/XMLSchema'>
@@ -90,14 +60,17 @@ export async function GET(
   `;
 
 	try {
-		const response = await fetch(soapEndpoint, {
-			method: "POST",
-			headers: {
-				"Content-Type": "text/xml",
-				SOAPAction: "Retrieve",
-			},
-			body: soapRequest,
-		});
+		const response = await fetch(
+			soapURL + "/Service.asmx",
+			{
+				method: "POST",
+				headers: {
+					"Content-Type": "text/xml",
+					SOAPAction: "Retrieve",
+				},
+				body: soapRequest,
+			}
+		);
 
 		const responseText = await response.text();
 
@@ -110,6 +83,7 @@ export async function GET(
 		const folderTree: Folder[] = await parseSoapResponse(
 			responseText
 		);
+
 		return NextResponse.json(folderTree);
 	} catch (error) {
 		return NextResponse.json({
@@ -180,6 +154,18 @@ function buildFolderTree(folders: Folder[]): Folder[] {
 			tree.push(folderMap.get(folder.id)!);
 		}
 	});
+	// Recursive function to sort children
+	function sortChildren(folderList: Folder[]) {
+		folderList.sort((a, b) => a.name.localeCompare(b.name));
+		folderList.forEach((folder) => {
+			if (folder.children.length > 0) {
+				sortChildren(folder.children);
+			}
+		});
+	}
+
+	// Sort the top-level folders and all their children
+	sortChildren(tree);
 
 	return tree;
 }

@@ -1,34 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-
-async function getToken() {
-	const tenant = process.env.SFMC_TENANT;
-	const client_id = process.env.SFMC_CLIENT_ID;
-	const client_secret = process.env.SFMC_CLIENT_SECRET;
-	const account_id = process.env.SFMC_ACCOUNT_ID;
-	const authURL = `https://${tenant}.auth.marketingcloudapis.com/v2/token`;
-	const payload = {
-		grant_type: "client_credentials",
-		client_id: client_id,
-		client_secret: client_secret,
-		account_id: account_id,
-	};
-
-	const req = await fetch(authURL, {
-		method: "POST",
-		headers: { "Content-Type": "application/json" },
-		body: JSON.stringify(payload),
-	});
-
-	const res = await req.json();
-	return res.access_token;
-}
+import { cookies } from "next/headers";
+import crypto from "crypto";
+import { getSession } from "@/lib/session";
 
 export async function POST(req: NextRequest) {
 	const { deConfig, file } = await req.json();
 	const { name, dataLength } = deConfig;
 
-	const token = await getToken();
-	const tenant = process.env.SFMC_TENANT;
+	const { accessToken, restURL } = await getSession();
+
+	console.log("Token: ", accessToken);
 
 	// Define the response structure
 	let response = {
@@ -83,12 +64,12 @@ export async function POST(req: NextRequest) {
 
 		// Create Data Extension Request
 		const createReq = await fetch(
-			`https://${tenant}.rest.marketingcloudapis.com/data/v1/customobjects/`,
+			`${restURL}/data/v1/customobjects/`,
 			{
 				method: "POST",
 				headers: {
 					"Content-Type": "application/json",
-					Authorization: `Bearer ${token}`,
+					Authorization: `Bearer ${accessToken}`,
 				},
 				body: JSON.stringify(payload),
 			}
@@ -137,8 +118,8 @@ export async function POST(req: NextRequest) {
 			(field: any) => field.isPrimaryKey === true
 		);
 		const uploadURL = hasPrimaryKeys
-			? `https://${tenant}.rest.marketingcloudapis.com/hub/v1/dataevents/key:${deKey}/rowset`
-			: `https://${tenant}.rest.marketingcloudapis.com/data/v1/async/dataextensions/key:${deKey}/rows`;
+			? `${restURL}/hub/v1/dataevents/key:${deKey}/rowset`
+			: `${restURL}/data/v1/async/dataextensions/key:${deKey}/rows`;
 
 		// Transform file data into proper format
 		const uploadBody: any[] = [];
@@ -180,11 +161,13 @@ export async function POST(req: NextRequest) {
 			);
 		});
 
+		console.log("upload url: ", uploadURL);
+
 		const uploadReq = await fetch(uploadURL, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/json",
-				Authorization: `Bearer ${token}`,
+				Authorization: `Bearer ${accessToken}`,
 			},
 			body: JSON.stringify(
 				hasPrimaryKeys ? uploadBody : { items: uploadBody }

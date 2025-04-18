@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
 					client_id: clientId.value,
 					code: code,
 					redirect_uri:
-						"https://snapde.ngrok.app/api/callback",
+						"https://snapde.vercel.app/api/callback",
 				}),
 			}
 		);
